@@ -1,2 +1,9 @@
 #define IDD_MAINWND         101
 #define IDC_MAINBOX         1000
+#define IDC_SONGDISP        1001
+#define IDC_KBPSDISP        1002
+#define IDC_KHZDISP         1003
+#define IDC_VOLUMEBAR       1004
+#define IDC_BALANCEBAR       1005
+#define IDC_POSBAR          1006
+#define IDB_PLAYPAUS        102
