@@ -161,14 +161,26 @@ STYLE 0x80c800c0
 FONT 8, "TAHOMA", 0, 0, 0
 BEGIN
   CONTROL "", 1000, 130, 0x50800046, 5, 10, 126, 52
-  CONTROL "", 1001, 130, 0x50800046, 137, 10, 213, 14
-  CONTROL "", 1002, 130, 0x50800046, 137, 30, 27, 14
-  CONTROL "", 1003, 130, 0x50800046, 198, 30, 27, 14
-  LTEXT "kbps", 0, 169, 34, 19, 11, 0x50020000
-  LTEXT "khz", 0, 231, 34, 19, 11, 0x50020000
-  CONTROL "", 1004, "MSCTLS_TRACKBAR32", 0x50030000, 137, 48, 97, 18
-  CONTROL "", 1005, "MSCTLS_TRACKBAR32", 0x50030000, 240, 48, 57, 18
+  CONTROL "", 1001, 130, 0x50800046, 135, 10, 215, 14
+  CONTROL "", 1002, 130, 0x50800046, 135, 30, 27, 14
+  CONTROL "", 1003, 130, 0x50800046, 195, 30, 22, 14
+  LTEXT "kbps", 0, 167, 34, 19, 11, 0x50020000
+  LTEXT "khz", 0, 221, 34, 19, 11, 0x50020000
+  CONTROL "", 1004, "MSCTLS_TRACKBAR32", 0x50030000, 132, 48, 103, 18
+  CONTROL "", 1005, "MSCTLS_TRACKBAR32", 0x50030000, 235, 48, 61, 18
   CONTROL "", 1006, "MSCTLS_TRACKBAR32", 0x50030000, 5, 70, 341, 18
+  LTEXT "mono", 1007, 292, 34, 19, 11, 0x50020000
+  LTEXT "stereo", 1008, 323, 34, 22, 11, 0x50020000
+  CHECKBOX "EQ", 1201, 301, 48, 21, 14, 0x50010002
+  CHECKBOX "PL", 1202, 329, 48, 21, 14, 0x50010002
+  PUSHBUTTON "PREV", 1100, 13, 97, 29, 14, 0x50010000
+  PUSHBUTTON "PLAY", 1101, 46, 97, 29, 14, 0x50010000
+  PUSHBUTTON "PAUSE", 1102, 78, 97, 29, 14, 0x50010000
+  PUSHBUTTON "STOP", 1103, 110, 97, 29, 14, 0x50010000
+  PUSHBUTTON "NEXT", 1104, 142, 97, 29, 14, 0x50010000
+  PUSHBUTTON "EJECT", 1105, 180, 97, 29, 14, 0x50010000
+  CHECKBOX "Shuffle", 1106, 218, 97, 41, 14, 0x50010002
+  CHECKBOX "Repeat", 1107, 264, 97, 41, 14, 0x50010002
 END
 
 /* Type: 24
@@ -179,16 +191,13 @@ END
 BEGIN
   "<?xml version=""1.0"" encoding=""UTF-8"" standalone=""yes""?>\r\n"
   "<assembly xmlns=""urn:schemas-microsoft-com:asm.v1"" manifestVersion=""1.0"">\r\n"
-  "    <dependency>\r\n"
-  "        <dependentAssembly>\r\n"
-  "            <assemblyIdentity\r\n"
-  "                type=""win32""\r\n"
-  "                name=""Microsoft.Windows.Common-Controls""\r\n"
-  "                version=""6.0.0.0""\r\n"
-  "                publicKeyToken=""6595b64144ccf1df""\r\n"
-  "                language=""*""\r\n"
-  "            />\r\n"
-  "        </dependentAssembly>\r\n"
-  "    </dependency>\r\n"
+  "\t<assemblyIdentity version=""1.0.0.0"" processorArchitecture=""*"" name=""CompanyName.ProductName.YourApplication"" type=""win32"" />\r\n"
+  "\t<description>Your application description here.</description>\r\n"
+  "\t<dependency>\r\n"
+  "\t\t<dependentAssembly>\r\n"
+  "\t\t\t<assemblyIdentity type=""win32"" name=""Microsoft.Windows.Common-Controls"" version=""6.0.0.0"" processorArchitecture=""*"" publicKeyToken=""6595b64144ccf1df"" languag"
+  "e=""*"" />\r\n"
+  "\t\t</dependentAssembly>\r\n"
+  "\t</dependency>\r\n"
   "</assembly>"
 END

@@ -3188,11 +3188,13 @@ typedef struct {
 // the following are the five main control buttons, with optionally shift 
 // or control pressed
 // (for the exact functions of each, just try it out)
-#define WINAMP_BUTTON1                  40044
-#define WINAMP_BUTTON2                  40045
-#define WINAMP_BUTTON3                  40046
-#define WINAMP_BUTTON4                  40047
-#define WINAMP_BUTTON5                  40048
+
+// i would've preferred if this was documented.
+#define WINAMP_BUTTON1                  40044 // PREVIOUS
+#define WINAMP_BUTTON2                  40045 // PLAY
+#define WINAMP_BUTTON3                  40046 // PAUSE
+#define WINAMP_BUTTON4                  40047 // STOP
+#define WINAMP_BUTTON5                  40048 // NEXT
 #define WINAMP_BUTTON1_SHIFT            40144
 #define WINAMP_BUTTON2_SHIFT            40145
 #define WINAMP_BUTTON3_SHIFT            40146
@@ -3204,6 +3206,7 @@ typedef struct {
 #define WINAMP_BUTTON4_CTRL             40157
 #define WINAMP_BUTTON5_CTRL             40158
 
+//found out WINAMP_FILE_PLAY acts as the "eject button"
 #define WINAMP_FILE_PLAY                40029 // pops up the load file(s) box
 #define WINAMP_FILE_DIR                 40187 // pops up the load directory box
 #define WINAMP_OPTIONS_PREFS            40012 // pops up the preferences
