@@ -1,13 +1,16 @@
 // based around https://github.com/WACUP/gen_thinger/blob/main/Example%20plugin/gen_thingerexampleplugin.cpp
 #include "native.h"
 
-// Plugin initialization function
 int init() {
 
-    INITCOMMONCONTROLSEX icex;
-	icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
-	icex.dwICC = ICC_STANDARD_CLASSES;
-	InitCommonControlsEx(&icex);
+    INITCOMMONCONTROLSEX icc;
+
+    // Initialise common controls.
+    icc.dwSize = sizeof(icc);
+    icc.dwICC = ICC_WIN95_CLASSES;
+    InitCommonControlsEx(&icc);
+
+    GetSkinColors();
 
     COLORREF* oscColors = osccolors(colors);
 
@@ -43,7 +46,7 @@ void quit()
 void config()
 {
 	MessageBoxW(plugin.hwndParent,
-		PLUGIN_TITLE L"\r\nThis plug-in has nothing to configure!",
+		PLUGIN_TITLE L"\r\nThis plug-in has nothing to configure! ...yet.",
 		NULL, MB_ICONWARNING);
 }
 
@@ -180,6 +183,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 SendMessage(hTrackBar3, TBM_SETPOS, TRUE, getOutputTimePercentage());
                 CheckDlgButton(hwnd, IDC_EQ, IsEQVisible() ? BST_CHECKED : BST_UNCHECKED);
                 CheckDlgButton(hwnd, IDC_PL, IsPLEditVisible() ? BST_CHECKED : BST_UNCHECKED);
+                GetSkinColors();
                 if (res == 1) {
                     EnableWindow(hTrackBar3, TRUE);
                 } else if (res == 0 || i_trackLengthMS == -1) {
@@ -392,6 +396,14 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
             return 0;
         }
 
+// how though?
+/*         case WM_WA_IPC:
+            if (lParam == IPC_SKIN_CHANGED) {
+                GetSkinColors();
+                return 0;
+            }
+            break; */
+
         default:
             return FALSE;
     }
@@ -420,7 +432,6 @@ LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 		}
 		break;
 	}
-
 
 	/* Call previous window procedure */
 	return CallWindowProc((WNDPROC)lpOldWinampWndProc,hwnd,message,wParam,lParam);
@@ -548,402 +559,446 @@ BOOL IsEQVisible() {
 }
 
 void DrawMainBox(HWND hMainBox, int res) {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hMainBox, &ps);
+    PAINTSTRUCT ps;
+    HDC hdc = BeginPaint(hMainBox, &ps);
 
-            RECT rc;
-            GetClientRect(hMainBox, &rc);
-            int width = rc.right - rc.left;
-            int height = rc.bottom - rc.top;
+    RECT rc;
+    GetClientRect(hMainBox, &rc);
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
 
-            // Create a memory device context for double buffering
-            HDC hdcBuffer = CreateCompatibleDC(hdc);
-            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
-            char* sadata;
+    // Create a memory device context for double buffering
+    HDC hdcBuffer = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+    char* sadata;
 
-            // Draw onto the off-screen buffer
-            // Fill the background with white
-            HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
-            //HBRUSH hBrushBg2 = CreateSolidBrush(RGB(0, 0, 0)); // White color
-            FillRect(hdcBuffer, &rc, hBrushBg);
+    // Draw onto the off-screen buffer
+    // Fill the background with white
+    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    //HBRUSH hBrushBg2 = CreateSolidBrush(RGB(0, 0, 0)); // White color
+    FillRect(hdcBuffer, &rc, hBrushBg);
 
-            // Set the font size
-            int fontSize = 34; // Change this to the desired font size
-            HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
-            HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+    // Set the font size
+    int fontSize = 34; // Change this to the desired font size
+    HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
+    HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
 
-            // Draw text
-            textRect = { 10, 1, width - 7, height - 10 }; // Adjust the coordinates and size as needed
-            const std::wstring infoText = GetInfoText(TimeMode);
-            std::wstring timeText;
+    // Draw text
+    textRect = { 60, 1, 176, 31 }; // Adjust the coordinates and size as needed
+    const std::wstring infoText = GetInfoText(TimeMode);
+    std::wstring timeText;
 
-            ULONGLONG currentTime = GetTickCount64();
-            DWORD elapsedTime = static_cast<DWORD>(currentTime - pauseStartTime);
+    ULONGLONG currentTime = GetTickCount64();
+    DWORD elapsedTime = static_cast<DWORD>(currentTime - pauseStartTime);
 
-            // Set timeText to flashing SongTimer if Winamp is paused
-            if (res == 3 && elapsedTime % SECOND_DURATION < SECOND_DURATION / 2) {
-                timeText = L"  :  "; // Flashing SongTimer
-            } else {
-                timeText = (res == 0) ? L"  :  " : infoText; // Default to infoText or SongTimer
-            }
+    // Set timeText to flashing SongTimer if Winamp is paused
+    if (res == 3 && elapsedTime % SECOND_DURATION < SECOND_DURATION / 2) {
+        timeText = L"  :  "; // Flashing SongTimer
+    } else {
+        timeText = (res == 0) ? L"  :  " : infoText; // Default to infoText or SongTimer
+    }
 
-            DrawTextW(hdcBuffer, timeText.c_str(), timeText.size(), &textRect, DT_RIGHT | DT_TOP);
-            // Restore the original font
-            SelectObject(hdcBuffer, hOldFont);
-            DeleteObject(hFont);
+    DrawTextW(hdcBuffer, timeText.c_str(), timeText.size(), &textRect, DT_RIGHT | DT_TOP);
+    // Restore the original font
+    SelectObject(hdcBuffer, hOldFont);
+    DeleteObject(hFont);
 
-            // Get SA data
-            sadata = export_sa_get();
+    // Get SA data
+    sadata = export_sa_get();
 
-/*          // Draw the rectangle around the visualizer area
-            RECT visRect = {12 * 2, 18 * 2, (12 + 77) * 2, (19 + 18) * 2}; // x, y, width, height
-            FillRect(hdcBuffer, &visRect, hBrushBg2); */
+    // Draw the rectangle around the visualizer area
+    //FillRect(hdcBuffer, &textRect, hBrushBg2);
 
-            for (int y = 19; y < 37; y++) {
-                SetPixel(hdcBuffer, 11 * 2, y * 2, RGB(0,0,0));
-            }
+    for (int y = 19; y < 37; y++) {
+        SetPixel(hdcBuffer, 11 * 2, y * 2, RGB(0,0,0));
+    }
 
-            for (int x = 11; x < 89; x++) {
-                SetPixel(hdcBuffer, x * 2, 37 * 2, RGB(0,0,0));
-            }
+    for (int x = 11; x < 89; x++) {
+        SetPixel(hdcBuffer, x * 2, 37 * 2, RGB(0,0,0));
+    }
 
-            /* MoveToEx(hdcBuffer, 22, 38, NULL);
-            LineTo(hdcBuffer, 22, 76); */
+    /* MoveToEx(hdcBuffer, 22, 38, NULL);
+    LineTo(hdcBuffer, 22, 76); */
 
-            /* MoveToEx(hdcBuffer, 22, 76, NULL);
-            LineTo(hdcBuffer, 180, 76); */
-            // Load the bitmap from the resource
-            HBITMAP hResBitmap = LoadBitmap(plugin.hDllInstance, MAKEINTRESOURCE(IDB_PLAYPAUS));
+    /* MoveToEx(hdcBuffer, 22, 76, NULL);
+    LineTo(hdcBuffer, 180, 76); */
+    // Load the bitmap from the resource
+    HBITMAP hResBitmap = LoadBitmap(plugin.hDllInstance, MAKEINTRESOURCE(IDB_PLAYPAUS));
 
-            if (hResBitmap)
-            {
-                // Get the dimensions of the bitmap
-                BITMAP bmpInfo;
-                GetObject(hResBitmap, sizeof(BITMAP), &bmpInfo);
+    if (hResBitmap)
+    {
+        // Get the dimensions of the bitmap
+        BITMAP bmpInfo;
+        GetObject(hResBitmap, sizeof(BITMAP), &bmpInfo);
 
-                // Define variables for source coordinates and dimensions
-                int sourceX, sourceY, sourceWidth, sourceHeight;
+        // Define variables for source coordinates and dimensions
+        int sourceX, sourceY, sourceWidth, sourceHeight;
 
-                // Adjust source coordinates and dimensions based on the value of 'res'
-                if (res == 1) {
-                    sourceX = 0;
-                    sourceY = 0;
-                    sourceWidth = 18;
-                    sourceHeight = 18;
-                } else if (res == 0) {
-                    sourceX = 36;
-                    sourceY = 0;
-                    sourceWidth = 18;
-                    sourceHeight = 18;
-                } else if (res == 3) {
-                    sourceX = 18;
-                    sourceY = 0;
-                    sourceWidth = 18;
-                    sourceHeight = 18;
+        // Adjust source coordinates and dimensions based on the value of 'res'
+        if (res == 1) {
+            sourceX = 0;
+            sourceY = 0;
+            sourceWidth = 18;
+            sourceHeight = 18;
+        } else if (res == 0) {
+            sourceX = 36;
+            sourceY = 0;
+            sourceWidth = 18;
+            sourceHeight = 18;
+        } else if (res == 3) {
+            sourceX = 18;
+            sourceY = 0;
+            sourceWidth = 18;
+            sourceHeight = 18;
+        } else {
+            // Default values if 'res' is not recognized
+            sourceX = 0;
+            sourceY = 0;
+            sourceWidth = bmpInfo.bmWidth; // Entire width of the bitmap
+            sourceHeight = bmpInfo.bmHeight; // Entire height of the bitmap
+        }
+
+        // Create a compatible DC for the bitmap
+        HDC hdcBitmap = CreateCompatibleDC(hdcBuffer);
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBitmap, hResBitmap);
+
+        // Draw the first portion onto the off-screen buffer at the desired location
+        BitBlt(hdcBuffer, 30, 10, sourceWidth, sourceHeight, hdcBitmap, sourceX, sourceY, SRCCOPY);
+
+        if (res == 1) {
+            // Draw the second portion onto the off-screen buffer at the desired location
+            BitBlt(hdcBuffer, 26, 10, 6, 18, hdcBitmap, 72, 0, SRCCOPY);
+        }
+
+        // Clean up
+        SelectObject(hdcBitmap, hOldBitmap);
+        DeleteDC(hdcBitmap);
+        DeleteObject(hResBitmap);
+    }
+    if (VisMode == 2) {
+            // Get the array of colors for visualization mode 2
+            COLORREF* oscColors = osccolors(colors);
+
+            for (int x = 0; x < 75; x++) {
+                signed char y;
+                if (sadata){
+                    y = sadata[x + 75];
                 } else {
-                    // Default values if 'res' is not recognized
-                    sourceX = 0;
-                    sourceY = 0;
-                    sourceWidth = bmpInfo.bmWidth; // Entire width of the bitmap
-                    sourceHeight = bmpInfo.bmHeight; // Entire height of the bitmap
+                    y = 0;
                 }
 
-                // Create a compatible DC for the bitmap
-                HDC hdcBitmap = CreateCompatibleDC(hdcBuffer);
-                HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBitmap, hResBitmap);
+                int intValue = y + 7;
+                intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
 
-                // Draw the first portion onto the off-screen buffer at the desired location
-                BitBlt(hdcBuffer, 30, 10, sourceWidth, sourceHeight, hdcBitmap, sourceX, sourceY, SRCCOPY);
+                // Calculate the endpoint of the line based on intValue
+                int endpointY = (intValue * 2) + 40; // Adjusted for starting at y=42
 
-                if (res == 1) {
-                    // Draw the second portion onto the off-screen buffer at the desired location
-                    BitBlt(hdcBuffer, 26, 10, 6, 18, hdcBitmap, 72, 0, SRCCOPY);
+                // Select the color from oscColors based on intValue
+                COLORREF lineColor = oscColors[intValue];
+
+                // Set the line color
+                HPEN hPen = CreatePen(PS_SOLID, 1, lineColor);
+                HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
+
+                // Grab the first point of sadata so that we don't have a weird
+                // line that's just static
+                if (x == 0) {
+                    MoveToEx(hdcBuffer, 26, 40 + (intValue * 2), NULL);
+                } else {
+                    LineTo(hdcBuffer, (x * 2) + 26, endpointY);
                 }
 
-                // Clean up
-                SelectObject(hdcBitmap, hOldBitmap);
-                DeleteDC(hdcBitmap);
-                DeleteObject(hResBitmap);
-            }
-            if (VisMode == 2) {
-                if (sadata) {
-                    // Get the array of colors for visualization mode 2
-                    COLORREF* oscColors = osccolors(colors);
-
-                    for (int x = 0; x < 75; x++) {
-                        signed char y = sadata[x + 75];
-                        int intValue = y + 7;
-                        intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
-
-                        // Calculate the endpoint of the line based on intValue
-                        int endpointY = (intValue * 2) + 40; // Adjusted for starting at y=42
-
-                        // Select the color from oscColors based on intValue
-                        COLORREF lineColor = oscColors[intValue];
-
-                        // Set the line color
-                        HPEN hPen = CreatePen(PS_SOLID, 1, lineColor);
-                        HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
-
-                        // Grab the first point of sadata so that we don't have a weird
-                        // line that's just static
-                        if (x == 0) {
-                            MoveToEx(hdcBuffer, 26, 40 + (intValue * 2), NULL);
-                        } else {
-                            LineTo(hdcBuffer, (x * 2) + 26, endpointY);
-                        }
-
-                        // Restore the original pen
-                        SelectObject(hdcBuffer, hOldPen);
-                        DeleteObject(hPen);
-                    }
-
-                    // Release memory allocated for oscColors array
-                    releaseColorRefs(oscColors);
-                }
+                // Restore the original pen
+                SelectObject(hdcBuffer, hOldPen);
+                DeleteObject(hPen);
             }
 
-            else if (VisMode == 1) {
-                if (sadata) {
-                    static float sapeaks[150];
-                    static char safalloff[150];
-                    static char sapeaksdec[150];
-                    signed char sadata2[150];
+            // Release memory allocated for oscColors array
+            releaseColorRefs(oscColors);
+    }
 
-                    for (int x = 0; x < 75; x++) {
-                        sadata2[x] = sadata[x];
-                        signed char y = safalloff[x];
-                        signed char y2 = sapeaks[x];
+    else if (VisMode == 1) {
+        static float sapeaks[150];
+        static char safalloff[150];
+        static char sapeaksdec[150];
+        signed char sadata2[150];
 
-                        safalloff[x] = safalloff[x] - 2;
-
-                        // okay this is really funny
-                        // somehow the internal vis data for winamp/wacup can just, wrap around
-                        // but here it didnt, until i saw my rect drawing *under* its intended area
-                        // and i just figured out that winamp's vis box just wraps that around
-                        // this is really funny to me
-                        if (sadata2[x] < 0) {
-                            sadata2[x] = sadata2[x] + 127;
-                        }
-                        if (sadata2[x] >= 15) {
-                            sadata2[x] = 15;
-                        }
-
-                        if (safalloff[x] <= sadata2[x]) {
-                            safalloff[x] = sadata2[x];
-                        }
-
-                        sapeaks[x] = sapeaks[x] - 1.0f / 5.0f;
-                        if (safalloff[x] > sapeaks[x]) {
-                            sapeaks[x] = safalloff[x];
-                        }
-
-                        int intValue = -y + 17;
-                        int intValue2 = -y2 + 16;
-
-                        for (int y3 = 0; y3 < 16; y3++) {
-                            const RECT analyzer = {26 + (x * 2), 70, 26 + (x * 2) + 2, (intValue * 2) + 36};
-                            COLORREF analyzerColor = RGB(colors[intValue].r, colors[intValue].g, colors[intValue].b);
-                            HBRUSH hBrushAnalyzer = CreateSolidBrush(analyzerColor);
-                            FillRect(hdcBuffer, &analyzer, hBrushAnalyzer);
-                            DeleteObject(hBrushAnalyzer);
-                        }
-
-                        // Draw peaks using a single color
-                        if (intValue2 >= 16) {
-                            continue;
-                        }
-                        const RECT peaks = {26 + (x * 2), 37 + (intValue2 * 2), 26 + (x * 2) + 2, (intValue2 * 2) + 39};
-                        COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
-                        HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);
-                        FillRect(hdcBuffer, &peaks, hBrushPeaks);
-                        DeleteObject(hBrushPeaks);
-                    }
-                }
-            } else if (VisMode == 3) {
-                // SORRY NOTHING
+        for (int x = 0; x < 75; x++) {
+            if (sadata){
+                sadata2[x] = sadata[x];
+            } else {
+                sadata2[x] = 0;
             }
 
-                // Draw oscilloscope data
-/*          if (sadata) {
-                for (int x = 0; x < 75; x++) {
-                    signed char y = sadata[x + 75];
-                    int intValue = y + 6;
-                    intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
+            signed char y = safalloff[x];
+            signed char y2 = sapeaks[x];
 
-                    if (x == 0) {
-                        last_y = intValue; // Use intValue directly
-                    }
+            safalloff[x] = safalloff[x] - 2;
 
-                    top = intValue; // Use intValue directly
-                    bottom = last_y;
-                    last_y = intValue;
+            // okay this is really funny
+            // somehow the internal vis data for winamp/wacup can just, wrap around
+            // but here it didnt, until i saw my rect drawing *under* its intended area
+            // and i just figured out that winamp's vis box just wraps that around
+            // this is really funny to me
+            if (sadata2[x] < 0) {
+                sadata2[x] = sadata2[x] + 127;
+            }
+            if (sadata2[x] >= 15) {
+                sadata2[x] = 15;
+            }
 
-                    if (bottom < top) {
-                        int temp = bottom;
-                        bottom = top;
-                        top = temp + 1;
-                    }
+            if (safalloff[x] <= sadata2[x]) {
+                safalloff[x] = sadata2[x];
+            }
 
-                        for (int dy = top; dy <= bottom; dy++) {
-                            RECT rect = {(x * 2) + 26, (dy * 2) + 40, (x * 2) + 26 + 2, (dy * 2) + 40 + 2}; // Rectangles of width 2px and height 2px
-                            FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH)); // Draw the rectangle
-                        }
-                    }
-                } */
-                        //FillRect(hdcBuffer, &visRect, (HBRUSH)GetStockObject(BLACK_BRUSH));
-            // Copy the off-screen buffer to the screen
-            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+            sapeaks[x] = sapeaks[x] - 1.0f / 5.0f;
+            if (safalloff[x] > sapeaks[x]) {
+                sapeaks[x] = safalloff[x];
+            }
 
-            // Clean up
-            SelectObject(hdcBuffer, hOldBitmap);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcBuffer);
-            DeleteObject(hBrushBg);
+            int intValue = -y + 17;
+            int intValue2 = -y2 + 16;
+            
+            int bottom = 17;
 
-            EndPaint(hMainBox, &ps);
+            for (int dy = intValue; dy <= bottom; ++dy) {
+                int color_index = dy + 1; // Assuming dy starts from 0
+                COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
+
+                RECT analyzer = createRect(26 + (x * 2), 70, 2, (dy * 2) + 36 - 70); // Define the rectangle
+                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+                FillRect(hdcBuffer, &analyzer, hBrush); // Fill the rectangle with the brush color
+                DeleteObject(hBrush); // Delete the brush to release resources
+            }
+
+            // Draw peaks using a single color
+            if (intValue2 >= 16) {
+                continue;
+            }
+            const RECT peaks = createRect(26 + (x * 2), 37 + (intValue2 * 2), 2, 2);
+            COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
+            HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);
+            FillRect(hdcBuffer, &peaks, hBrushPeaks);
+            DeleteObject(hBrushPeaks);
+        }
+    } else if (VisMode == 3) {
+        // SORRY NOTHING
+    }
+
+    // Draw oscilloscope data
+/*  if (sadata) {
+        for (int x = 0; x < 75; x++) {
+            signed char y = sadata[x + 75];
+            int intValue = y + 6;
+            intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
+
+            if (x == 0) {
+                last_y = intValue; // Use intValue directly
+            }
+
+            top = intValue; // Use intValue directly
+            bottom = last_y;
+            last_y = intValue;
+
+            if (bottom < top) {
+                int temp = bottom;
+                bottom = top;
+                top = temp + 1;
+            }
+
+            for (int dy = top; dy <= bottom; dy++) {
+                RECT rect = {(x * 2) + 26, (dy * 2) + 40, (x * 2) + 26 + 2, (dy * 2) + 40 + 2}; // Rectangles of width 2px and height 2px
+                FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH)); // Draw the rectangle
+            }
+        }
+    } */
+
+    drawClutterbar(hdcBuffer, 6, 2, 30, height, RGB(0, 0, 0), L"OAIDV");
+    // Copy the off-screen buffer to the screen
+    BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+
+    // Clean up
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
+    DeleteObject(hBrushBg);
+
+    EndPaint(hMainBox, &ps);
 }
 
 void DrawBitrate(HWND hBitrate, int res, int bitr) {
     PAINTSTRUCT ps;
     RECT rc;
     GetClientRect(hBitrate, &rc);
-            HDC hdc = BeginPaint(hBitrate, &ps);
-            GetClientRect(hBitrate, &rc);
-            int width = rc.right - rc.left;
-            int height = rc.bottom - rc.top;
+    HDC hdc = BeginPaint(hBitrate, &ps);
+    GetClientRect(hBitrate, &rc);
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
 
-            // Create a memory device context for double buffering
-            HDC hdcBuffer = CreateCompatibleDC(hdc);
-            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+    // Create a memory device context for double buffering
+    HDC hdcBuffer = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-            HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
-            FillRect(hdcBuffer, &rc, hBrushBg);
+    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    FillRect(hdcBuffer, &rc, hBrushBg);
 
-            // Set the font size
-            int fontSize = 13; // Change this to the desired font size
-            HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
-            HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+    // Set the font size
+    int fontSize = 13; // Change this to the desired font size
+    HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
+    HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
 
-            // Draw text
-            RECT textRect = { 0, 3, width - 5, height }; // Adjust the coordinates and size as needed
-            std::string bitr_str = std::to_string(bitr);
-            std::string bitrate_str = "";
-            if (res == 0) {
-                bitrate_str = "";
-            } else {
-                bitrate_str = bitr_str;
-            }
-            DrawTextA(hdcBuffer, bitrate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
+    // Draw text
+    RECT textRect = createRect(0, 3, width - 5, height - 3); // Adjust the coordinates and size as needed
+    std::string bitr_str = std::to_string(bitr);
+    std::string bitrate_str = "";
+    if (res == 0) {
+        bitrate_str = "";
+    } else {
+        bitrate_str = bitr_str;
+    }
+    DrawTextA(hdcBuffer, bitrate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
 
-            // Restore the original font
-            SelectObject(hdcBuffer, hOldFont);
-            DeleteObject(hFont);
+    // Restore the original font
+    SelectObject(hdcBuffer, hOldFont);
+    DeleteObject(hFont);
 
-            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+    BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
 
-            // Clean up
-            SelectObject(hdcBuffer, hOldBitmap);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcBuffer);
-            DeleteObject(hBrushBg);
+    // Clean up
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
+    DeleteObject(hBrushBg);
 
-            EndPaint(hBitrate, &ps);
+    EndPaint(hBitrate, &ps);
 }
 
 void DrawSamplerate(HWND hSamplerate, int res, int smpr) {
     PAINTSTRUCT ps;
     RECT rc;
     GetClientRect(hSamplerate, &rc);
-            HDC hdc = BeginPaint(hSamplerate, &ps);
-            GetClientRect(hSamplerate, &rc);
-            int width = rc.right - rc.left;
-            int height = rc.bottom - rc.top;
+    HDC hdc = BeginPaint(hSamplerate, &ps);
+    GetClientRect(hSamplerate, &rc);
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
 
-            // Create a memory device context for double buffering
-            HDC hdcBuffer = CreateCompatibleDC(hdc);
-            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+    // Create a memory device context for double buffering
+    HDC hdcBuffer = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-            HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
-            FillRect(hdcBuffer, &rc, hBrushBg);
+    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    FillRect(hdcBuffer, &rc, hBrushBg);
 
-            // Set the font size
-            int fontSize = 13; // Change this to the desired font size
-            HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
-            HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+    // Set the font size
+    int fontSize = 13; // Change this to the desired font size
+    HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
+    HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
 
-            // Draw text
-            RECT textRect = { 0, 3, width - 5, height }; // Adjust the coordinates and size as needed
-            std::string smpr_str = std::to_string(smpr);
-            std::string samplerate_str = "";
-            if (res == 0) {
-                samplerate_str = "";
-            } else {
-                samplerate_str = smpr_str;
-            }
-            DrawTextA(hdcBuffer, samplerate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
+    // Draw text
+    RECT textRect = createRect(0, 3, width - 5, height - 3); // Adjust the coordinates and size as needed
+    std::string smpr_str = std::to_string(smpr);
+    std::string samplerate_str = "";
+    if (res == 0) {
+        samplerate_str = "";
+    } else {
+        samplerate_str = smpr_str;
+    }
+    DrawTextA(hdcBuffer, samplerate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
 
-            // Restore the original font
-            SelectObject(hdcBuffer, hOldFont);
-            DeleteObject(hFont);
+    // Restore the original font
+    SelectObject(hdcBuffer, hOldFont);
+    DeleteObject(hFont);
 
-            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+    BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
 
-            // Clean up
-            SelectObject(hdcBuffer, hOldBitmap);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcBuffer);
-            DeleteObject(hBrushBg);
+    // Clean up
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
+    DeleteObject(hBrushBg);
 
-            EndPaint(hSamplerate, &ps);
+    EndPaint(hSamplerate, &ps);
 }
 
 void DrawSongTicker(HWND hSongTicker) {
     PAINTSTRUCT ps;
     RECT rc;
     GetClientRect(hSongTicker, &rc);
-            HDC hdc = BeginPaint(hSongTicker, &ps);
-            GetClientRect(hSongTicker, &rc);
-            int width = rc.right - rc.left;
-            int height = rc.bottom - rc.top;
+    HDC hdc = BeginPaint(hSongTicker, &ps);
+    GetClientRect(hSongTicker, &rc);
+    int width = rc.right - rc.left;
+    int height = rc.bottom - rc.top;
 
-            // Create a memory device context for double buffering
-            HDC hdcBuffer = CreateCompatibleDC(hdc);
-            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+    // Create a memory device context for double buffering
+    HDC hdcBuffer = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-            HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
-            FillRect(hdcBuffer, &rc, hBrushBg);
+    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    FillRect(hdcBuffer, &rc, hBrushBg);
 
-            // Set the font size
-            int fontSize = 13; // Change this to the desired font size
-            HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-                OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
-            HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+    // Set the font size
+    int fontSize = 13; // Change this to the desired font size
+    HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
+    HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
 
-            // Draw text
-            RECT textRect = { 6, 3, width - 6, height }; // Adjust the coordinates and size as needed
-            DrawTextW(hdcBuffer, CreateSongTickerText().c_str(), -1, &textRect, DT_LEFT | DT_TOP);
+    // Draw text
+    RECT textRect = createRect(6, 3, width - 6, height); // Adjust the coordinates and size as needed
+    DrawTextW(hdcBuffer, CreateSongTickerText().c_str(), -1, &textRect, DT_LEFT | DT_TOP);
 
-            // Restore the original font
-            SelectObject(hdcBuffer, hOldFont);
-            DeleteObject(hFont);
+    // Restore the original font
+    SelectObject(hdcBuffer, hOldFont);
+    DeleteObject(hFont);
 
-            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+    BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
 
-            // Clean up
-            SelectObject(hdcBuffer, hOldBitmap);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcBuffer);
-            DeleteObject(hBrushBg);
+    // Clean up
+    SelectObject(hdcBuffer, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcBuffer);
+    DeleteObject(hBrushBg);
 
-            EndPaint(hSongTicker, &ps);
+    EndPaint(hSongTicker, &ps);
+}
+
+void drawClutterbar(HDC hdc, int x, int y, int width, int height, COLORREF textColor, const std::wstring& text) {
+    // Create font with the specified size
+    HFONT hFont = CreateFont(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+        OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
+    
+    // Set font and text color
+    HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
+    SetTextColor(hdc, textColor);
+
+    // Calculate the height of each character
+    TEXTMETRIC tm;
+    GetTextMetrics(hdc, &tm);
+    int charHeight = tm.tmHeight + 2;
+
+    // Calculate the width of the widest character
+    SIZE charSize;
+    GetTextExtentPoint32(hdc, "W", 1, &charSize); // Use narrow string here
+    int charWidth = charSize.cx;
+
+    // Draw each letter vertically
+    for (size_t i = 0; i < text.size(); ++i) {
+        std::wstring letter = text.substr(i, 1);
+        RECT rect = { x, y + static_cast<LONG>(i) * charHeight, x + charWidth, y + static_cast<LONG>(i + 1) * charHeight };
+        DrawTextW(hdc, letter.c_str(), 1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    }
+
+    // Restore original font
+    SelectObject(hdc, hOldFont);
+    
+    // Cleanup font object
+    DeleteObject(hFont);
 }
 
 // Plugin getter function

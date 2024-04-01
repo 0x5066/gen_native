@@ -65,6 +65,7 @@ LRESULT trackLengthMS = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETOUTPUTTIME
 int i_trackLengthMS = (int)(trackLengthMS);
 BOOL IsPLEditVisible();
 BOOL IsEQVisible();
+void drawClutterbar(HDC hdc, int x, int y, int width, int height, COLORREF textColor, const std::wstring& text);
 
 // Define the duration in milliseconds for each "second"
 const int SECOND_DURATION = 2000;
@@ -79,7 +80,7 @@ int sourceY = 0; // Y-coordinate of the top-left corner of the portion
 int sourceWidth = 0; // Width of the portion
 int sourceHeight = 0; // Height of the portion
 
-RECT visRect = {13 * 2, 20 * 2, (13 * 2) + (76 * 2), (20 * 2) + (16 * 2)};
+RECT visRect = {12 * 2, 19 * 2, (13 * 2) + (76 * 2), (20 * 2) + (16 * 2)};
 RECT textRect;
 
 static WNDPROC lpOldWinampWndProc; /* Important: Old window procedure pointer */
@@ -135,6 +136,25 @@ Color colors[] = {
     {150, 150, 150}   // 23 = analyzer peak dots
 };
 
+void GetSkinColors() {
+    unsigned char* colorBytes = (unsigned char*)SendMessage(hwnd_winamp, WM_WA_IPC, 10, IPC_GET_GENSKINBITMAP);
+
+    if (colorBytes == reinterpret_cast<unsigned char*>(0) || colorBytes == reinterpret_cast<unsigned char*>(1)) {
+        // SORRY NOTHING
+    }
+    else {
+        // Extract color values from the response and store them in the colors array
+        for (int i = 0; i < 24; ++i) {
+            colors[i].r = colorBytes[i * 3];
+            colors[i].g = colorBytes[i * 3 + 1];
+            colors[i].b = colorBytes[i * 3 + 2];
+        }
+    }
+
+    // Free the memory allocated by Winamp
+    GlobalFree(colorBytes);
+}
+
 // Function to convert Color array to COLORREF array
 COLORREF* convertToCOLORREF(const Color* colors, int size) {
     COLORREF* colorRefs = new COLORREF[size];
@@ -172,6 +192,15 @@ COLORREF* osccolors(const Color* colors) {
 // Function to release memory allocated for COLORREF array
 void releaseColorRefs(COLORREF* colorRefs) {
     delete[] colorRefs;
+}
+
+RECT createRect(int x, int y, int width, int height) {
+    RECT rect;
+    rect.left = x;
+    rect.top = y;
+    rect.right = x + width;
+    rect.bottom = y + height;
+    return rect;
 }
 
 // Plugin description

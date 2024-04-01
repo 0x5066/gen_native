@@ -1313,6 +1313,7 @@ typedef struct _prefsDlgRecW {
 ** (WACUP)
 ** pass 10 will now return a pointer to an unsigned char[72] array of 24 r,g,b values 
 ** (i.e. the first 3 bytes are one rgb value, next 3 are the next so on).
+** for back compat, if the return value to the call is zero or one then it's not supported by the parent program being used.
 */
 
 #ifdef __cplusplus
