@@ -58,12 +58,8 @@ void OpenMyDialog()
 
         /* Toggle dialog. If it's created, destroy it. */
         DestroyWindow(hwndCfg);
-        CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND|MF_UNCHECKED);
-        
-        /* Code for reshowing it if it's already created.
-        ShowWindow(hwndCfg, SW_SHOW);
-        SetForegroundWindow(hwndCfg);
-        */
+        CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
+        SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT); // Reset parent
         return;
     }
 
@@ -75,9 +71,10 @@ void OpenMyDialog()
 
         // Set the position of the dialog window
         SetWindowPos(hwndCfg, HWND_TOP, parentRect.left, parentRect.top, 0, 0, SWP_NOSIZE);
-        
+
         ShowWindow(hwndCfg, SW_SHOW);
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_CHECKED);
+        SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)hwndCfg, IPC_SETDIALOGBOXPARENT); // Set parent
     }
     else {
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
@@ -202,13 +199,16 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
                     ret = 3;
-                } if (res == 0) {
+                } else if (res == 0) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
                     ret = 4;
                 }
-                InvalidateRect(hwnd, NULL, FALSE);
             }
+            InvalidateHWND(hMainBox, hwnd);
+            InvalidateHWND(hBitrate, hwnd);
+            InvalidateHWND(hSamplerate, hwnd);
+            InvalidateHWND(hSongTicker, hwnd);
         }
         return TRUE;
     }
@@ -326,6 +326,8 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         // Close the window
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
         DestroyWindow(hwnd);
+        // Reset the parent back to the original Winamp window
+        SendMessage(hwnd_winamp, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT);
         break;
 
     case WM_PAINT: {
@@ -677,9 +679,6 @@ void DrawMainBox(HWND hMainBox, int res) {
         DeleteDC(hdcBitmap);
         DeleteObject(hResBitmap);
     }
-    if (VisMode == 2) {
-            // Get the array of colors for visualization mode 2
-            COLORREF* oscColors = osccolors(colors);
 
             for (int x = 0; x < 75; x++) {
                 signed char y;
@@ -695,31 +694,32 @@ void DrawMainBox(HWND hMainBox, int res) {
                 // Calculate the endpoint of the line based on intValue
                 int endpointY = (intValue * 2) + 40; // Adjusted for starting at y=42
 
-                // Select the color from oscColors based on intValue
-                COLORREF lineColor = oscColors[intValue];
+        if (VisMode == 2) {
+            // Get the array of colors for osci
+            COLORREF* oscColors = osccolors(colors);
+            // Select the color from oscColors based on intValue
+            COLORREF lineColor = oscColors[intValue];
 
-                // Set the line color
-                HPEN hPen = CreatePen(PS_SOLID, 1, lineColor);
-                HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
+            // Set the line color
+            HPEN hPen = CreatePen(PS_SOLID, 1, lineColor);
+            HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
 
-                // Grab the first point of sadata so that we don't have a weird
-                // line that's just static
-                if (x == 0) {
-                    MoveToEx(hdcBuffer, 26, 40 + (intValue * 2), NULL);
-                } else {
-                    LineTo(hdcBuffer, (x * 2) + 26, endpointY);
-                }
-
-                // Restore the original pen
-                SelectObject(hdcBuffer, hOldPen);
-                DeleteObject(hPen);
+            // Grab the first point of sadata so that we don't have a weird
+            // line that's just static
+            if (x == 0) {
+                MoveToEx(hdcBuffer, 26, 40 + (intValue * 2), NULL);
+            } else {
+                LineTo(hdcBuffer, (x * 2) + 26, endpointY);
             }
 
+            // Restore the original pen
+            SelectObject(hdcBuffer, hOldPen);
+            DeleteObject(hPen);
             // Release memory allocated for oscColors array
             releaseColorRefs(oscColors);
+        }
     }
 
-    else if (VisMode == 1) {
         static float sapeaks[150];
         static char safalloff[150];
         static char sapeaksdec[150];
@@ -762,7 +762,7 @@ void DrawMainBox(HWND hMainBox, int res) {
             int intValue2 = -y2 + 16;
             
             int bottom = 17;
-
+        if (VisMode == 1) {
             for (int dy = intValue; dy <= bottom; ++dy) {
                 int color_index = dy + 1; // Assuming dy starts from 0
                 COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
@@ -783,7 +783,7 @@ void DrawMainBox(HWND hMainBox, int res) {
             FillRect(hdcBuffer, &peaks, hBrushPeaks);
             DeleteObject(hBrushPeaks);
         }
-    } else if (VisMode == 3) {
+    } if (VisMode == 3) {
         // SORRY NOTHING
     }
 

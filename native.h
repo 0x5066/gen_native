@@ -216,3 +216,22 @@ winampGeneralPurposePlugin plugin = {
     NULL,
     NULL
 };
+
+// hacky way to invalidate and update my hwnds
+// it feels like i shouldnt need this, but i do???
+void InvalidateHWND(HWND hwnd1, HWND hwnd) {
+    RECT hwnd1Rect;
+    GetWindowRect(hwnd1, &hwnd1Rect); // Get screen coordinates of hMainBox
+
+    // Convert screen coordinates to client coordinates of the parent window
+    POINT topLeft = { hwnd1Rect.left, hwnd1Rect.top };
+    POINT bottomRight = { hwnd1Rect.right, hwnd1Rect.bottom };
+    ScreenToClient(hwnd, &topLeft);
+    ScreenToClient(hwnd, &bottomRight);
+
+    // Create a RECT structure from the client coordinates
+    RECT clientRect = { topLeft.x, topLeft.y, bottomRight.x, bottomRight.y };
+
+    // Invalidate the region
+    InvalidateRect(hwnd, &clientRect, FALSE);
+}
