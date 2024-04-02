@@ -187,22 +187,18 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                     EnableWindow(hTrackBar3, FALSE);
                 }
 
-                if (monoster == 1) {
+                if (res == 0) {
+                    EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
+                    EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
+                } else if (monoster == 1) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), TRUE);
-                    ret = 1;
-                } if (monoster == 2) {
+                } else if (monoster == 2) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), TRUE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
-                    ret = 2;
-                } if (monoster == 0 || monoster == -1) {
+                } else {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
-                    ret = 3;
-                } else if (res == 0) {
-                    EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
-                    EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
-                    ret = 4;
                 }
             }
             InvalidateHWND(hMainBox, hwnd);
