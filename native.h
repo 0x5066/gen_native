@@ -65,7 +65,7 @@ LRESULT trackLengthMS = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETOUTPUTTIME
 int i_trackLengthMS = (int)(trackLengthMS);
 BOOL IsPLEditVisible();
 BOOL IsEQVisible();
-void drawClutterbar(HDC hdc, int x, int y, int width, int height, COLORREF textColor, const std::wstring& text);
+void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wstring& text);
 
 // Define the duration in milliseconds for each "second"
 const int SECOND_DURATION = 2000;
@@ -150,9 +150,6 @@ void GetSkinColors() {
             colors[i].b = colorBytes[i * 3 + 2];
         }
     }
-
-    // Free the memory allocated by Winamp
-    GlobalFree(colorBytes);
 }
 
 // Function to convert Color array to COLORREF array

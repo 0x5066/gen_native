@@ -573,15 +573,26 @@ void DrawMainBox(HWND hMainBox, int res) {
 
     // Draw onto the off-screen buffer
     // Fill the background with white
-    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    HBRUSH hBrushBg = GetSysColorBrush(COLOR_WINDOW);
     //HBRUSH hBrushBg2 = CreateSolidBrush(RGB(0, 0, 0)); // White color
     FillRect(hdcBuffer, &rc, hBrushBg);
+
+    // Set the desired text color
+    COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
+    SetTextColor(hdcBuffer, sysTextColor);
+
+    // Set the background color of the text rectangle
+    HBRUSH hTextBgBrush = GetSysColorBrush(COLOR_WINDOW);
+    FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
     int fontSize = 34; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+
+    // Select a transparent brush for text background
+    SetBkMode(hdcBuffer, TRANSPARENT);
 
     // Draw text
     textRect = { 60, 1, 176, 31 }; // Adjust the coordinates and size as needed
@@ -811,7 +822,7 @@ void DrawMainBox(HWND hMainBox, int res) {
         }
     } */
 
-    drawClutterbar(hdcBuffer, 6, 2, 30, height, RGB(0, 0, 0), L"OAIDV");
+    drawClutterbar(hdcBuffer, 6, 2, 30, height, L"OAIDV");
     // Copy the off-screen buffer to the screen
     BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
 
@@ -838,14 +849,21 @@ void DrawBitrate(HWND hBitrate, int res, int bitr) {
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    HBRUSH hBrushBg = GetSysColorBrush(COLOR_WINDOW);
     FillRect(hdcBuffer, &rc, hBrushBg);
+
+    // Set the background color of the text rectangle
+    HBRUSH hTextBgBrush = GetSysColorBrush(COLOR_WINDOW);
+    FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
     int fontSize = 13; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+
+    // Select a transparent brush for text background
+    SetBkMode(hdcBuffer, TRANSPARENT);
 
     // Draw text
     RECT textRect = createRect(0, 3, width - 5, height - 3); // Adjust the coordinates and size as needed
@@ -856,6 +874,10 @@ void DrawBitrate(HWND hBitrate, int res, int bitr) {
     } else {
         bitrate_str = bitr_str;
     }
+    // Set the desired text color
+    COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
+    SetTextColor(hdcBuffer, sysTextColor);
+
     DrawTextA(hdcBuffer, bitrate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
 
     // Restore the original font
@@ -887,14 +909,21 @@ void DrawSamplerate(HWND hSamplerate, int res, int smpr) {
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    HBRUSH hBrushBg = GetSysColorBrush(COLOR_WINDOW);
     FillRect(hdcBuffer, &rc, hBrushBg);
+
+    // Set the background color of the text rectangle
+    HBRUSH hTextBgBrush = GetSysColorBrush(COLOR_WINDOW);
+    FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
     int fontSize = 13; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+
+    // Select a transparent brush for text background
+    SetBkMode(hdcBuffer, TRANSPARENT);
 
     // Draw text
     RECT textRect = createRect(0, 3, width - 5, height - 3); // Adjust the coordinates and size as needed
@@ -905,6 +934,9 @@ void DrawSamplerate(HWND hSamplerate, int res, int smpr) {
     } else {
         samplerate_str = smpr_str;
     }
+    // Set the desired text color
+    COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
+    SetTextColor(hdcBuffer, sysTextColor);
     DrawTextA(hdcBuffer, samplerate_str.c_str(), -1, &textRect, DT_RIGHT | DT_TOP);
 
     // Restore the original font
@@ -936,14 +968,25 @@ void DrawSongTicker(HWND hSongTicker) {
     HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
     HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
 
-    HBRUSH hBrushBg = CreateSolidBrush(RGB(255, 255, 255)); // White color
+    HBRUSH hBrushBg = GetSysColorBrush(COLOR_WINDOW);
     FillRect(hdcBuffer, &rc, hBrushBg);
+
+    // Set the background color of the text rectangle
+    HBRUSH hTextBgBrush = GetSysColorBrush(COLOR_WINDOW);
+    FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
     int fontSize = 13; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
+
+    // Select a transparent brush for text background
+    SetBkMode(hdcBuffer, TRANSPARENT);
+
+    // Set the desired text color
+    COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
+    SetTextColor(hdcBuffer, sysTextColor);
 
     // Draw text
     RECT textRect = createRect(6, 3, width - 6, height); // Adjust the coordinates and size as needed
@@ -964,14 +1007,16 @@ void DrawSongTicker(HWND hSongTicker) {
     EndPaint(hSongTicker, &ps);
 }
 
-void drawClutterbar(HDC hdc, int x, int y, int width, int height, COLORREF textColor, const std::wstring& text) {
+void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wstring& text) {
     // Create font with the specified size
     HFONT hFont = CreateFont(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     
     // Set font and text color
     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
-    SetTextColor(hdc, textColor);
+    // Set the desired text color
+    COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
+    SetTextColor(hdc, sysTextColor);
 
     // Calculate the height of each character
     TEXTMETRIC tm;
@@ -987,8 +1032,13 @@ void drawClutterbar(HDC hdc, int x, int y, int width, int height, COLORREF textC
     for (size_t i = 0; i < text.size(); ++i) {
         std::wstring letter = text.substr(i, 1);
         RECT rect = { x, y + static_cast<LONG>(i) * charHeight, x + charWidth, y + static_cast<LONG>(i + 1) * charHeight };
+        // Set the background color of the text rectangle
+        HBRUSH hTextBgBrush = GetSysColorBrush(COLOR_WINDOW);
+        FillRect(hdc, &rect, hTextBgBrush);
         DrawTextW(hdc, letter.c_str(), 1, &rect, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
     }
+    // Select a transparent brush for text background
+    SetBkMode(hdc, TRANSPARENT);
 
     // Restore original font
     SelectObject(hdc, hOldFont);

@@ -91,7 +91,8 @@
       <DelayLoadDLLs>Freit</DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "C:\Program Files (x86)\Winamp\Plugins"</Command>
+      <Command>copy "$(TargetPath)" "C:\Program Files (x86)\Winamp\Plugins"
+copy "$(TargetPath)" "C:\Program Files (x86)\WACUP\Plugins"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -117,7 +118,8 @@
       <AdditionalDependencies>comctl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy "$(TargetPath)" "C:\Program Files (x86)\Winamp\Plugins"</Command>
+      <Command>copy "$(TargetPath)" "C:\Program Files (x86)\Winamp\Plugins"
+copy "$(TargetPath)" "C:\Program Files (x86)\WACUP\Plugins"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
