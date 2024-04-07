@@ -23,7 +23,7 @@ int init() {
     mii.fType = MFT_STRING;
     mii.wID = MENUID_MYITEM;
 
-    InsertMenuItem(WinampMenu, WINAMP_OPTIONS_EQ, FALSE, &mii);
+    InsertMenuItem(WinampMenu, WINAMP_OPTIONS_PLEDIT, FALSE, &mii);
     /* Always remember to adjust "Option" submenu position. */
     /* Note: In Winamp 5.0+ this is unneccesary as it is more intelligent when
        it comes to menus, but you must do it so it works with older versions. */
