@@ -16,18 +16,18 @@ int init() {
 
     WinampMenu = (HMENU)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_HMENU);
 
-	MENUITEMINFO mii;
-	mii.cbSize		= sizeof(MENUITEMINFO);
-	mii.fMask		= MIIM_TYPE|MIIM_ID;
-	mii.dwTypeData	= PLUGIN_CAPTION;
-	mii.fType		= MFT_STRING;
-	mii.wID			= MENUID_MYITEM;
+    MENUITEMINFO mii;
+    mii.cbSize = sizeof(MENUITEMINFO);
+    mii.fMask = MIIM_TYPE | MIIM_ID;
+    mii.dwTypeData = PLUGIN_CAPTION;
+    mii.fType = MFT_STRING;
+    mii.wID = MENUID_MYITEM;
 
     InsertMenuItem(WinampMenu, WINAMP_OPTIONS_EQ, FALSE, &mii);
-	/* Always remember to adjust "Option" submenu position. */
-	/* Note: In Winamp 5.0+ this is unneccesary as it is more intelligent when
-	   it comes to menus, but you must do it so it works with older versions. */
-	SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_ADJUST_OPTIONSMENUPOS);
+    /* Always remember to adjust "Option" submenu position. */
+    /* Note: In Winamp 5.0+ this is unneccesary as it is more intelligent when
+       it comes to menus, but you must do it so it works with older versions. */
+    SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_ADJUST_OPTIONSMENUPOS);
     // Perform initialization tasks here
 
     lpOldWinampWndProc = WNDPROC(SetWindowLongPtr(plugin.hwndParent, GWLP_WNDPROC, int(WinampSubclass)));
@@ -45,9 +45,9 @@ void quit()
 
 void config()
 {
-	MessageBoxW(plugin.hwndParent,
-		PLUGIN_TITLE L"\r\nThis plug-in has nothing to configure! ...yet.",
-		NULL, MB_ICONWARNING);
+    MessageBoxW(plugin.hwndParent,
+        PLUGIN_TITLE L"\r\nThis plug-in has nothing to configure! ...yet.",
+        NULL, MB_ICONWARNING);
 }
 
 void OpenMyDialog()
@@ -79,6 +79,8 @@ void OpenMyDialog()
     else {
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
     }
+
+    DPIscale = GetWindowDPI(hwndCfg) / 96;
 }
 
 // Define a global variable for the off-screen buffer
@@ -97,12 +99,12 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         // Initialization code here
         WinampMenu = (HMENU)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_HMENU);
         SetWindowTextW(hwnd, CreateSongTickerText().c_str());
-        bitr = SendMessage(hwnd_winamp,WM_WA_IPC,1,IPC_GETINFO);
-        smpr = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GETINFO);
-        res = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_ISPLAYING);
+        bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
+        smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
+        res = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_ISPLAYING);
         trackLengthMS = SendMessage(plugin.hwndParent, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
         i_trackLengthMS = (int)(trackLengthMS);
-        monoster = SendMessage(hwnd_winamp,WM_WA_IPC,2,IPC_GETINFO);
+        monoster = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETINFO);
         hMainBox = GetDlgItem(hwnd, IDC_MAINBOX);
         hBitrate = GetDlgItem(hwnd, IDC_KBPSDISP);
         hSamplerate = GetDlgItem(hwnd, IDC_KHZDISP);
@@ -116,15 +118,16 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         hTrackBar3 = GetDlgItem(hwnd, IDC_POSBAR);
         SendMessage(hTrackBar3, TBM_SETRANGE, FALSE, MAKELPARAM(0, 128));
         SendMessage(hTrackBar3, TBM_SETPOS, TRUE, getOutputTimePercentage());
-        repeat=SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_REPEAT);
+        repeat = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GET_REPEAT);
         CheckDlgButton(hwnd, IDC_REPEAT, repeat ? BST_CHECKED : BST_UNCHECKED);
-        shuffle=SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_SHUFFLE);
+        shuffle = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GET_SHUFFLE);
         CheckDlgButton(hwnd, IDC_SHUFFLE, shuffle ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hwnd, IDC_EQ, IsEQVisible() ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hwnd, IDC_PL, IsPLEditVisible() ? BST_CHECKED : BST_UNCHECKED);
         if (res == 1) {
             EnableWindow(hTrackBar3, TRUE);
-        } else if (res == 0 || i_trackLengthMS == -1) {
+        }
+        else if (res == 0 || i_trackLengthMS == -1) {
             EnableWindow(hTrackBar3, FALSE);
         }
 
@@ -163,17 +166,17 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         if (wParam == ID_TIMER) {
             if (hMainBox) {
                 SetWindowTextW(hwnd, CreateSongTickerText().c_str());
-                bitr = SendMessage(hwnd_winamp,WM_WA_IPC,1,IPC_GETINFO);
-                smpr = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GETINFO);
+                bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
+                smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
                 curvol = IPC_GETVOLUME(hwnd_winamp);
                 curpan = IPC_GETPANNING(hwnd_winamp);
-                res = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_ISPLAYING);
+                res = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_ISPLAYING);
                 trackLengthMS = SendMessage(plugin.hwndParent, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
                 i_trackLengthMS = (int)(trackLengthMS);
-                monoster = SendMessage(hwnd_winamp,WM_WA_IPC,2,IPC_GETINFO);
-                repeat=SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_REPEAT);
+                monoster = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETINFO);
+                repeat = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GET_REPEAT);
                 CheckDlgButton(hwnd, IDC_REPEAT, repeat ? BST_CHECKED : BST_UNCHECKED);
-                shuffle=SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_SHUFFLE);
+                shuffle = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GET_SHUFFLE);
                 CheckDlgButton(hwnd, IDC_SHUFFLE, shuffle ? BST_CHECKED : BST_UNCHECKED);
                 SendMessage(hTrackBar, TBM_SETPOS, TRUE, curvol);
                 SendMessage(hTrackBar2, TBM_SETPOS, TRUE, curpan);
@@ -183,20 +186,24 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 GetSkinColors();
                 if (res == 1) {
                     EnableWindow(hTrackBar3, TRUE);
-                } else if (res == 0 || i_trackLengthMS == -1) {
+                }
+                else if (res == 0 || i_trackLengthMS == -1) {
                     EnableWindow(hTrackBar3, FALSE);
                 }
 
                 if (res == 0) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
-                } else if (monoster == 1) {
+                }
+                else if (monoster == 1) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), TRUE);
-                } else if (monoster == 2) {
+                }
+                else if (monoster == 2) {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), TRUE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
-                } else {
+                }
+                else {
                     EnableWindow(GetDlgItem(hwnd, IDC_STEREO), FALSE);
                     EnableWindow(GetDlgItem(hwnd, IDC_MONO), FALSE);
                 }
@@ -213,50 +220,51 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         switch (LOWORD(wParam)) {
         case IDC_PREV:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_BUTTON1,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_BUTTON1, 0);
                 return TRUE;
             }
             break;
         case IDC_PLAY:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_BUTTON2,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_BUTTON2, 0);
                 return TRUE;
             }
             break;
         case IDC_STOP:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_BUTTON4,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_BUTTON4, 0);
                 return TRUE;
             }
             break;
         case IDC_PAUSE:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_BUTTON3,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_BUTTON3, 0);
                 return TRUE;
             }
             break;
         case IDC_NEXT:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_BUTTON5,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_BUTTON5, 0);
                 return TRUE;
             }
             break;
         case IDC_EJECT:
             if (HIWORD(wParam) == BN_CLICKED) {
-                SendMessage(plugin.hwndParent,WM_COMMAND,WINAMP_FILE_PLAY,0);
+                SendMessage(plugin.hwndParent, WM_COMMAND, WINAMP_FILE_PLAY, 0);
                 return TRUE;
             }
             break;
         case IDC_REPEAT:
-        // there's a better way to do this, right?
-        // check WM_TIMER CheckDlgButton(..) because holy shit
-        // this is just nasty
-        // if anyone knows a better way plz send a PR
+            // there's a better way to do this, right?
+            // check WM_TIMER CheckDlgButton(..) because holy shit
+            // this is just nasty
+            // if anyone knows a better way plz send a PR
             if (HIWORD(wParam) == BN_CLICKED) {
                 int setrep = 0;
                 if (repeat == 1) {
                     setrep = 0;
-                } else {
+                }
+                else {
                     setrep = 1;
                 }
 
@@ -265,15 +273,16 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
             }
             break;
         case IDC_SHUFFLE:
-        // there's a better way to do this, right?
-        // check WM_TIMER CheckDlgButton(..) because holy shit
-        // this is just nasty
-        // if anyone knows a better way plz send a PR
+            // there's a better way to do this, right?
+            // check WM_TIMER CheckDlgButton(..) because holy shit
+            // this is just nasty
+            // if anyone knows a better way plz send a PR
             if (HIWORD(wParam) == BN_CLICKED) {
                 int setshuf = 0;
                 if (shuffle == 1) {
                     setshuf = 0;
-                } else {
+                }
+                else {
                     setshuf = 1;
                 }
 
@@ -334,105 +343,120 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         return 0;
     }
 
-        case WM_HSCROLL: {
-            // Check if the message is from the TrackBar
-            if ((HWND)lParam == hTrackBar) {
-                // Get the current position of the TrackBar
-                int position = SendMessage(hTrackBar, TBM_GETPOS, 0, 0);
+    case WM_HSCROLL: {
+        // Check if the message is from the TrackBar
+        if ((HWND)lParam == hTrackBar) {
+            // Get the current position of the TrackBar
+            int position = SendMessage(hTrackBar, TBM_GETPOS, 0, 0);
 
-                // Set the volume of Winamp using IPC_SETVOLUME
-                SendMessage(hwnd_winamp, WM_WA_IPC, position, IPC_SETVOLUME);
-            }
-            if ((HWND)lParam == hTrackBar2) {
-                // Get the current position of the TrackBar
-                int position = SendMessage(hTrackBar2, TBM_GETPOS, 0, 0);
+            // Set the volume of Winamp using IPC_SETVOLUME
+            SendMessage(hwnd_winamp, WM_WA_IPC, position, IPC_SETVOLUME);
+        }
+        if ((HWND)lParam == hTrackBar2) {
+            // Get the current position of the TrackBar
+            int position = SendMessage(hTrackBar2, TBM_GETPOS, 0, 0);
 
-                // Set the volume of Winamp using IPC_SETVOLUME
-                SendMessage(hwnd_winamp, WM_WA_IPC, position, IPC_SETBALANCE);
-            }
-            break;
+            // Set the volume of Winamp using IPC_SETVOLUME
+            SendMessage(hwnd_winamp, WM_WA_IPC, position, IPC_SETBALANCE);
+        }
+        break;
+    }
+
+    case WM_LBUTTONDOWN: {
+        POINT pt;
+        GetCursorPos(&pt);
+        ScreenToClient(hMainBox, &pt);
+        if (PtInRect(&visRect, pt)) {
+            // Switch to the next visualization mode
+            VisMode++;
+            if (VisMode > 3) // Wrap around if the mode exceeds 3
+                VisMode = 1;
+        }
+        if (PtInRect(&textRect, pt)) {
+            TimeMode++;
+            if (TimeMode > 1)
+                TimeMode = 0;
+        }
+        break;
+    }
+
+    case WM_MOUSEWHEEL: {
+        // Get the distance that the wheel is rotated
+        short delta = GET_WHEEL_DELTA_WPARAM(wParam);
+        curvol = IPC_GETVOLUME(hwnd_winamp);
+        int vol = (curvol / 12);
+
+        if (delta > 0) {
+            vol++;
+        }
+        else if (delta < 0) {
+            vol--;
         }
 
-        case WM_LBUTTONDOWN: {
-            POINT pt;
-            GetCursorPos(&pt);
-            ScreenToClient(hMainBox, &pt);
-            if (PtInRect(&visRect, pt)) {
-                // Switch to the next visualization mode
-                VisMode++;
-                if (VisMode > 3) // Wrap around if the mode exceeds 3
-                    VisMode = 1;
-            }
-            if (PtInRect(&textRect, pt)) {
-                TimeMode++;
-                if (TimeMode > 1)
-                    TimeMode = 0;
-            }
-            break;
-        }
+        // Ensure the volume stays within valid range (0-255)
+        vol = std::max(0, std::min(vol, 22));
+        vol = std::max(0, std::min(vol * 12, 255));
 
-        case WM_MOUSEWHEEL: {
-            // Get the distance that the wheel is rotated
-            short delta = GET_WHEEL_DELTA_WPARAM(wParam);
-            curvol = IPC_GETVOLUME(hwnd_winamp);
-            int vol = (curvol / 12);
+        // Send the new volume value to Winamp
+        SendMessage(hwnd_winamp, WM_WA_IPC, vol, IPC_SETVOLUME);
 
-            if (delta > 0) {
-                vol++;
-            } else if (delta < 0) {
-                vol--;
-            }
+        // Return zero to indicate that the message has been processed
+        return 0;
+    }
 
-            // Ensure the volume stays within valid range (0-255)
-            vol = std::max(0, std::min(vol, 22));
-            vol = std::max(0, std::min(vol * 12, 255));
-
-            // Send the new volume value to Winamp
-            SendMessage(hwnd_winamp, WM_WA_IPC, vol, IPC_SETVOLUME);
-
-            // Return zero to indicate that the message has been processed
-            return 0;
-        }
+    case WM_DPICHANGED: {
+        //UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+        DPIscale = HIWORD(wParam) / 96.0f;
+        visRect = {
+            MulDiv(12 * 2, HIWORD(wParam), 96.0f),    // Left coordinate scaled according to DPI
+            MulDiv(19 * 2, HIWORD(wParam), 96.0f),    // Top coordinate scaled according to DPI
+            MulDiv((13 * 2 + 76 * 2), HIWORD(wParam), 96.0f),  // Right coordinate scaled according to DPI
+            MulDiv((20 * 2 + 16 * 2), HIWORD(wParam), 96.0f)  // Bottom coordinate scaled according to DPI
+        };
+        //std::string dpiscalestr = std::to_string(HIWORD(wParam) / 96.0f);
+        //MessageBox(hwnd, dpiscalestr.c_str(), "", MB_OK);
+        break;
+    }
 
 // how though?
 /*         case WM_WA_IPC:
-            if (lParam == IPC_SKIN_CHANGED) {
-                GetSkinColors();
-                return 0;
-            }
-            break; */
+    if (lParam == IPC_SKIN_CHANGED) {
+        GetSkinColors();
+        return 0;
+    }
+    break; */
 
-        default:
-            return FALSE;
+    default:
+        return FALSE;
     }
     return TRUE;
 }
 
 LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	
-	switch (message)
-	{
-	case WM_COMMAND:
-		if (LOWORD(wParam)==MENUID_MYITEM && HIWORD(wParam) == 0)
-		{
-			OpenMyDialog();
-			return 0;
-		}
-		break;
-	/* Also handle WM_SYSCOMMAND if people are selectng the item through
-	   the Winamp submenu in system menu. */
-	case WM_SYSCOMMAND:
-		if (wParam == MENUID_MYITEM)
-		{
-			OpenMyDialog();
-			return 0;
-		}
-		break;
-	}
 
-	/* Call previous window procedure */
-	return CallWindowProc((WNDPROC)lpOldWinampWndProc,hwnd,message,wParam,lParam);
+    switch (message)
+    {
+    case WM_COMMAND:
+        if (LOWORD(wParam) == MENUID_MYITEM && HIWORD(wParam) == 0)
+        {
+            OpenMyDialog();
+            return 0;
+        }
+        break;
+        /* Also handle WM_SYSCOMMAND if people are selectng the item through
+           the Winamp submenu in system menu. */
+    case WM_SYSCOMMAND:
+        if (wParam == MENUID_MYITEM)
+        {
+            OpenMyDialog();
+            return 0;
+        }
+        break;
+    }
+
+    /* Call previous window procedure */
+    return CallWindowProc((WNDPROC)lpOldWinampWndProc, hwnd, message, wParam, lParam);
 }
 
 std::wstring formatTime(int milliseconds) {
@@ -446,7 +470,7 @@ std::wstring formatTime(int milliseconds) {
     // Format as MM:SS
     std::wstringstream ss;
     ss << std::setw(2) << std::setfill(L'0') << minutes << L":"
-       << std::setw(2) << std::setfill(L'0') << seconds;
+        << std::setw(2) << std::setfill(L'0') << seconds;
 
     return ss.str();
 }
@@ -466,7 +490,7 @@ std::wstring CreateSongTickerText() {
     int pos = SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GETLISTPOS);
 
     wchar_t* titleStr = (wchar_t*)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_PLAYING_TITLE);
-    
+
     //const wchar_t* getSongTime = GetSongLength();
     // Send the WM_WA_IPC message to get the current output time
     LRESULT waOutputTime2 = SendMessage(plugin.hwndParent, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
@@ -491,15 +515,17 @@ std::wstring GetInfoText(int TimeMode) {
     int timeRemaining;
     if (TimeMode == 1) {
         timeRemaining = waTrackLength - waOutputTime;
-    } else {
+    }
+    else {
         timeRemaining = waOutputTime;
     }
 
     // Convert the time to MM:SS format
     std::wstring outputTimeString;
-    if (TimeMode == 1){
+    if (TimeMode == 1) {
         outputTimeString = L"-" + formatTime(static_cast<int>(timeRemaining));
-    } else {
+    }
+    else {
         outputTimeString = formatTime(static_cast<int>(timeRemaining));
     }
 
@@ -523,10 +549,12 @@ int getOutputTimePercentage() {
         int percentage = (int)((double)outputTimeSeconds / totalTrackLengthSeconds * 128);
         if (percentage > 128) {
             return 128; // Cap the percentage at 128
-        } else {
+        }
+        else {
             return percentage;
         }
-    } else {
+    }
+    else {
         return 0; // Return 0 if there's no track playing or if track length is not available
     }
 }
@@ -577,6 +605,8 @@ void DrawMainBox(HWND hMainBox, int res) {
     //HBRUSH hBrushBg2 = CreateSolidBrush(RGB(0, 0, 0)); // White color
     FillRect(hdcBuffer, &rc, hBrushBg);
 
+    //FillRect(hdcBuffer, &visRect, hBrushBg2);
+
     // Set the desired text color
     COLORREF sysTextColor = GetSysColor(COLOR_WINDOWTEXT);
     SetTextColor(hdcBuffer, sysTextColor);
@@ -586,7 +616,7 @@ void DrawMainBox(HWND hMainBox, int res) {
     FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
-    int fontSize = 34; // Change this to the desired font size
+    int fontSize = 34 * DPIscale; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Arial"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
@@ -595,7 +625,13 @@ void DrawMainBox(HWND hMainBox, int res) {
     SetBkMode(hdcBuffer, TRANSPARENT);
 
     // Draw text
-    textRect = { 60, 1, 176, 31 }; // Adjust the coordinates and size as needed
+    textRect = {
+        static_cast<LONG>(60 * DPIscale),  // Left coordinate scaled according to DPI
+        static_cast<LONG>(1 * DPIscale),   // Top coordinate scaled according to DPI
+        static_cast<LONG>(176 * DPIscale), // Right coordinate scaled according to DPI
+        static_cast<LONG>(31 * DPIscale)   // Bottom coordinate scaled according to DPI
+    };
+
     const std::wstring infoText = GetInfoText(TimeMode);
     std::wstring timeText;
 
@@ -605,7 +641,8 @@ void DrawMainBox(HWND hMainBox, int res) {
     // Set timeText to flashing SongTimer if Winamp is paused
     if (res == 3 && elapsedTime % SECOND_DURATION < SECOND_DURATION / 2) {
         timeText = L"  :  "; // Flashing SongTimer
-    } else {
+    }
+    else {
         timeText = (res == 0) ? L"  :  " : infoText; // Default to infoText or SongTimer
     }
 
@@ -621,11 +658,11 @@ void DrawMainBox(HWND hMainBox, int res) {
     //FillRect(hdcBuffer, &textRect, hBrushBg2);
 
     for (int y = 19; y < 37; y++) {
-        SetPixel(hdcBuffer, 11 * 2, y * 2, RGB(0,0,0));
+        SetPixel(hdcBuffer, (11 * 2) * DPIscale, (y * 2) * DPIscale, RGB(0, 0, 0));
     }
 
     for (int x = 11; x < 89; x++) {
-        SetPixel(hdcBuffer, x * 2, 37 * 2, RGB(0,0,0));
+        SetPixel(hdcBuffer, (x * 2) * DPIscale, (37 * 2) * DPIscale, RGB(0, 0, 0));
     }
 
     /* MoveToEx(hdcBuffer, 22, 38, NULL);
@@ -651,17 +688,20 @@ void DrawMainBox(HWND hMainBox, int res) {
             sourceY = 0;
             sourceWidth = 18;
             sourceHeight = 18;
-        } else if (res == 0) {
+        }
+        else if (res == 0) {
             sourceX = 36;
             sourceY = 0;
             sourceWidth = 18;
             sourceHeight = 18;
-        } else if (res == 3) {
+        }
+        else if (res == 3) {
             sourceX = 18;
             sourceY = 0;
             sourceWidth = 18;
             sourceHeight = 18;
-        } else {
+        }
+        else {
             // Default values if 'res' is not recognized
             sourceX = 0;
             sourceY = 0;
@@ -673,12 +713,18 @@ void DrawMainBox(HWND hMainBox, int res) {
         HDC hdcBitmap = CreateCompatibleDC(hdcBuffer);
         HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBitmap, hResBitmap);
 
-        // Draw the first portion onto the off-screen buffer at the desired location
-        BitBlt(hdcBuffer, 30, 10, sourceWidth, sourceHeight, hdcBitmap, sourceX, sourceY, SRCCOPY);
+        // Calculate the destination coordinates and dimensions
+        int destX = 30 * DPIscale;
+        int destY = 10 * DPIscale;
+        int destWidth = sourceWidth * DPIscale; // Scale the width
+        int destHeight = sourceHeight * DPIscale; // Scale the height
+
+        // Draw the portion onto the off-screen buffer using StretchBlt for scaling
+        StretchBlt(hdcBuffer, destX, destY, destWidth, destHeight, hdcBitmap, sourceX, sourceY, sourceWidth, sourceHeight, SRCCOPY);
 
         if (res == 1) {
             // Draw the second portion onto the off-screen buffer at the desired location
-            BitBlt(hdcBuffer, 26, 10, 6, 18, hdcBitmap, 72, 0, SRCCOPY);
+            StretchBlt(hdcBuffer, 26 * DPIscale, 10 * DPIscale, 6 * DPIscale, 18 * DPIscale, hdcBitmap, 72, 0, 6, 18, SRCCOPY);
         }
 
         // Clean up
@@ -687,19 +733,20 @@ void DrawMainBox(HWND hMainBox, int res) {
         DeleteObject(hResBitmap);
     }
 
-            for (int x = 0; x < 75; x++) {
-                signed char y;
-                if (sadata){
-                    y = sadata[x + 75];
-                } else {
-                    y = 0;
-                }
+    for (int x = 0; x < 75; x++) {
+        signed char y;
+        if (sadata) {
+            y = sadata[x + 75];
+        }
+        else {
+            y = 0;
+        }
 
-                int intValue = y + 7;
-                intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
+        int intValue = y + 7;
+        intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
 
-                // Calculate the endpoint of the line based on intValue
-                int endpointY = (intValue * 2) + 40; // Adjusted for starting at y=42
+        // Calculate the endpoint of the line based on intValue
+        int endpointY = ((intValue * 2) + 40) * DPIscale; // Adjusted for starting at y=42
 
         if (VisMode == 2) {
             // Get the array of colors for osci
@@ -708,15 +755,16 @@ void DrawMainBox(HWND hMainBox, int res) {
             COLORREF lineColor = oscColors[intValue];
 
             // Set the line color
-            HPEN hPen = CreatePen(PS_SOLID, 1, lineColor);
+            HPEN hPen = CreatePen(PS_SOLID, DPIscale, lineColor); // Adjust pen width based on DPI scale
             HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
 
             // Grab the first point of sadata so that we don't have a weird
             // line that's just static
             if (x == 0) {
-                MoveToEx(hdcBuffer, 26, 40 + (intValue * 2), NULL);
-            } else {
-                LineTo(hdcBuffer, (x * 2) + 26, endpointY);
+                MoveToEx(hdcBuffer, 26 * DPIscale, (40 + (intValue * 2)) * DPIscale, NULL); // Adjust coordinates based on DPI scale
+            }
+            else {
+                LineTo(hdcBuffer, ((x * 2) + 26) * DPIscale, endpointY); // Adjust coordinates based on DPI scale
             }
 
             // Restore the original pen
@@ -727,54 +775,55 @@ void DrawMainBox(HWND hMainBox, int res) {
         }
     }
 
-        static float sapeaks[150];
-        static char safalloff[150];
-        static char sapeaksdec[150];
-        signed char sadata2[150];
+    static float sapeaks[150];
+    static char safalloff[150];
+    static char sapeaksdec[150];
+    signed char sadata2[150];
 
-        for (int x = 0; x < 75; x++) {
-            if (sadata){
-                sadata2[x] = sadata[x];
-            } else {
-                sadata2[x] = 0;
-            }
+    for (int x = 0; x < 75; x++) {
+        if (sadata) {
+            sadata2[x] = sadata[x];
+        }
+        else {
+            sadata2[x] = 0;
+        }
 
-            signed char y = safalloff[x];
-            signed char y2 = sapeaks[x];
+        signed char y = safalloff[x];
+        signed char y2 = sapeaks[x];
 
-            safalloff[x] = safalloff[x] - 2;
+        safalloff[x] = safalloff[x] - 2;
 
-            // okay this is really funny
-            // somehow the internal vis data for winamp/wacup can just, wrap around
-            // but here it didnt, until i saw my rect drawing *under* its intended area
-            // and i just figured out that winamp's vis box just wraps that around
-            // this is really funny to me
-            if (sadata2[x] < 0) {
-                sadata2[x] = sadata2[x] + 127;
-            }
-            if (sadata2[x] >= 15) {
-                sadata2[x] = 15;
-            }
+        // okay this is really funny
+        // somehow the internal vis data for winamp/wacup can just, wrap around
+        // but here it didnt, until i saw my rect drawing *under* its intended area
+        // and i just figured out that winamp's vis box just wraps that around
+        // this is really funny to me
+        if (sadata2[x] < 0) {
+            sadata2[x] = sadata2[x] + 127;
+        }
+        if (sadata2[x] >= 15) {
+            sadata2[x] = 15;
+        }
 
-            if (safalloff[x] <= sadata2[x]) {
-                safalloff[x] = sadata2[x];
-            }
+        if (safalloff[x] <= sadata2[x]) {
+            safalloff[x] = sadata2[x];
+        }
 
-            sapeaks[x] = sapeaks[x] - 1.0f / 5.0f;
-            if (safalloff[x] > sapeaks[x]) {
-                sapeaks[x] = safalloff[x];
-            }
+        sapeaks[x] = sapeaks[x] - 1.0f / 5.0f;
+        if (safalloff[x] > sapeaks[x]) {
+            sapeaks[x] = safalloff[x];
+        }
 
-            int intValue = -y + 17;
-            int intValue2 = -y2 + 16;
-            
-            int bottom = 17;
+        int intValue = -y + 17;
+        int intValue2 = -y2 + 16;
+
+        int bottom = 17;
         if (VisMode == 1) {
             for (int dy = intValue; dy <= bottom; ++dy) {
-                int color_index = dy + 1; // Assuming dy starts from 0
+                int color_index = dy; // Assuming dy starts from 0
                 COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
 
-                RECT analyzer = createRect(26 + (x * 2), 70, 2, (dy * 2) + 36 - 70); // Define the rectangle
+                RECT analyzer = createRect(26 * DPIscale + (x * 2) * DPIscale, 70 * DPIscale, 2 * DPIscale, (((dy * 2) + 36) - 70) * DPIscale); // Define the rectangle
                 HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
                 FillRect(hdcBuffer, &analyzer, hBrush); // Fill the rectangle with the brush color
                 DeleteObject(hBrush); // Delete the brush to release resources
@@ -784,7 +833,8 @@ void DrawMainBox(HWND hMainBox, int res) {
             if (intValue2 >= 16) {
                 continue;
             }
-            const RECT peaks = createRect(26 + (x * 2), 37 + (intValue2 * 2), 2, 2);
+            // why is there a weird off by one error in windows that doesn't show up in wine?????
+            const RECT peaks = createRect(26 * DPIscale + (x * 2) * DPIscale, (37 + intValue2 * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
             COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
             HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);
             FillRect(hdcBuffer, &peaks, hBrushPeaks);
@@ -857,7 +907,7 @@ void DrawBitrate(HWND hBitrate, int res, int bitr) {
     FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
-    int fontSize = 13; // Change this to the desired font size
+    int fontSize = 13 * DPIscale; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
@@ -871,7 +921,8 @@ void DrawBitrate(HWND hBitrate, int res, int bitr) {
     std::string bitrate_str = "";
     if (res == 0) {
         bitrate_str = "";
-    } else {
+    }
+    else {
         bitrate_str = bitr_str;
     }
     // Set the desired text color
@@ -917,7 +968,7 @@ void DrawSamplerate(HWND hSamplerate, int res, int smpr) {
     FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
-    int fontSize = 13; // Change this to the desired font size
+    int fontSize = 13 * DPIscale; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
@@ -931,7 +982,8 @@ void DrawSamplerate(HWND hSamplerate, int res, int smpr) {
     std::string samplerate_str = "";
     if (res == 0) {
         samplerate_str = "";
-    } else {
+    }
+    else {
         samplerate_str = smpr_str;
     }
     // Set the desired text color
@@ -976,7 +1028,7 @@ void DrawSongTicker(HWND hSongTicker) {
     FillRect(hdcBuffer, &textRect, hTextBgBrush);
 
     // Set the font size
-    int fontSize = 13; // Change this to the desired font size
+    int fontSize = 13 * DPIscale; // Change this to the desired font size
     HFONT hFont = CreateFont(fontSize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
     HFONT hOldFont = (HFONT)SelectObject(hdcBuffer, hFont);
@@ -1009,9 +1061,9 @@ void DrawSongTicker(HWND hSongTicker) {
 
 void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wstring& text) {
     // Create font with the specified size
-    HFONT hFont = CreateFont(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+    HFONT hFont = CreateFont(13 * DPIscale, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, TEXT("Tahoma"));
-    
+
     // Set font and text color
     HFONT hOldFont = (HFONT)SelectObject(hdc, hFont);
     // Set the desired text color
@@ -1021,7 +1073,7 @@ void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wst
     // Calculate the height of each character
     TEXTMETRIC tm;
     GetTextMetrics(hdc, &tm);
-    int charHeight = tm.tmHeight + 2;
+    int charHeight = tm.tmHeight + 2 * DPIscale;
 
     // Calculate the width of the widest character
     SIZE charSize;
@@ -1042,13 +1094,13 @@ void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wst
 
     // Restore original font
     SelectObject(hdc, hOldFont);
-    
+
     // Cleanup font object
     DeleteObject(hFont);
 }
 
 // Plugin getter function
-extern "C" __declspec(dllexport) winampGeneralPurposePlugin* winampGetGeneralPurposePlugin()
+extern "C" __declspec(dllexport) winampGeneralPurposePlugin * winampGetGeneralPurposePlugin()
 {
-	return &plugin;
+    return &plugin;
 }

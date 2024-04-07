@@ -1,7 +1,9 @@
-#define _WIN32_WINNT 0x0600
-#define _WIN32_IE 0x0900
+#ifdef _MSC_VER
+#define NOMINMAX
+#endif
 
 #include <windows.h>
+#include <winuser.h>
 #include <commctrl.h>
 #include "wacup/gen.h"
 #include "wacup/wa_ipc.h"
@@ -66,6 +68,14 @@ int i_trackLengthMS = (int)(trackLengthMS);
 BOOL IsPLEditVisible();
 BOOL IsEQVisible();
 void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wstring& text);
+float GetWindowDPI(HWND hWnd) {
+    HDC hdc = GetDC(hWnd);
+    float dpiX = GetDeviceCaps(hdc, LOGPIXELSX);
+    ReleaseDC(hWnd, hdc);
+    return dpiX; // Assuming X and Y DPI are the same for most cases
+}
+
+float DPIscale = 96.0f;
 
 // Define the duration in milliseconds for each "second"
 const int SECOND_DURATION = 2000;
@@ -80,7 +90,6 @@ int sourceY = 0; // Y-coordinate of the top-left corner of the portion
 int sourceWidth = 0; // Width of the portion
 int sourceHeight = 0; // Height of the portion
 
-RECT visRect = {12 * 2, 19 * 2, (13 * 2) + (76 * 2), (20 * 2) + (16 * 2)};
 RECT textRect;
 
 static WNDPROC lpOldWinampWndProc; /* Important: Old window procedure pointer */
@@ -97,6 +106,15 @@ HWND hSongTicker = NULL;
 HWND hTrackBar = NULL;
 HWND hTrackBar2 = NULL;
 HWND hTrackBar3 = NULL;
+
+// Define the RECT with DPI scaling applied
+//UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+RECT visRect = {
+    MulDiv(12 * 2, GetWindowDPI(hwndCfg), 96),    // Left coordinate scaled according to DPI
+    MulDiv(19 * 2, GetWindowDPI(hwndCfg), 96),    // Top coordinate scaled according to DPI
+    MulDiv((13 * 2 + 76 * 2), GetWindowDPI(hwndCfg), 96),  // Right coordinate scaled according to DPI
+    MulDiv((20 * 2 + 16 * 2), GetWindowDPI(hwndCfg), 96)  // Bottom coordinate scaled according to DPI
+};
 
 // Declare global variables for SA function pointers
 static char* (*export_sa_get)(void) = NULL;
