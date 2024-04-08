@@ -11,6 +11,7 @@ int init() {
     InitCommonControlsEx(&icc);
 
     GetSkinColors();
+    modern = modernskinyesno();
 
     //COLORREF* oscColors = osccolors(colors);
     InitializeOscColors(colors);
@@ -65,9 +66,16 @@ void OpenMyDialog()
 
     hwndCfg = CreateDialog(plugin.hDllInstance, MAKEINTRESOURCE(IDD_MAINWND), 0, MainWndProc);
     if (IsWindow(hwndCfg)) {
-        // Get the position and size of plugin.hwndParent
+        // i have zero idea if this even works - upd: kinda?
         RECT parentRect;
-        GetWindowRect(plugin.hwndParent, &parentRect);
+        HWND WIWA;
+        if (modern){
+            WIWA = FindWindow("BaseWindow_RootWnd", NULL);
+        } else {
+            WIWA = plugin.hwndParent;
+        }
+        // Get the position and size of plugin.hwndParent
+        GetWindowRect(WIWA, &parentRect);
 
         // Set the position of the dialog window
         SetWindowPos(hwndCfg, HWND_TOP, parentRect.left, parentRect.top, 0, 0, SWP_NOSIZE);
@@ -165,7 +173,9 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     case WM_TIMER: {
         if (wParam == ID_TIMER) {
             if (hMainBox) {
-                //SetWindowTextW(hwnd, CreateSongTickerText().c_str());
+                if (modern){
+                    SetWindowTextW(hwnd, CreateSongTickerText().c_str());
+                }
                 bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
                 smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
                 curvol = IPC_GETVOLUME(hwnd_winamp);
@@ -448,10 +458,15 @@ LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 
     // nvm figured it out lol
     case WM_WA_IPC: 
-    if (lParam == IPC_SKIN_CHANGED) {
-        GetSkinColors();
-        //MessageBox(hwnd, "skin changed", "", MB_OK);
+        if (lParam == IPC_SKIN_CHANGED) {
+            GetSkinColors();
+            modern = modernskinyesno();
+            if (!modern){
+                SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)hwndCfg, IPC_SETDIALOGBOXPARENT); // Set parent
+            }
         }
+    break;
+
     }
 
     /* Call previous window procedure */

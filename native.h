@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <winuser.h>
 #include <commctrl.h>
+#include <shlwapi.h>
 #include "wacup/gen.h"
 #include "wacup/wa_ipc.h"
 #include "resource.h"
@@ -74,6 +75,8 @@ float GetWindowDPI(HWND hWnd) {
     ReleaseDC(hWnd, hdc);
     return dpiX; // Assuming X and Y DPI are the same for most cases
 }
+bool modernskinyesno();
+bool modern;
 
 // thanks wine.
 #ifdef _MSC_VER
@@ -258,4 +261,20 @@ void InvalidateHWND(HWND hwnd1, HWND hwnd) {
 
     // Invalidate the region
     InvalidateRect(hwnd, &clientRect, FALSE);
+}
+
+bool modernskinyesno(){
+    bool yesno;
+    WCHAR skinname_buffer[MAX_PATH];
+    SendMessage(hwnd_winamp, WM_WA_IPC, (WPARAM)skinname_buffer, IPC_GETSKINW);
+    // Check if the skin.xml file exists
+    WCHAR skinXmlPath[MAX_PATH];
+    wcscpy_s(skinXmlPath, MAX_PATH, skinname_buffer);
+    PathAppendW(skinXmlPath, L"skin.xml");
+    if (PathFileExistsW(skinXmlPath)) {
+        yesno = TRUE;
+    } else {
+        yesno = FALSE;
+    }
+    return yesno;
 }
