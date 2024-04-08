@@ -75,6 +75,13 @@ float GetWindowDPI(HWND hWnd) {
     return dpiX; // Assuming X and Y DPI are the same for most cases
 }
 
+// thanks wine.
+#ifdef _MSC_VER
+int rectoffsetbyone = 1;
+#else
+int rectoffsetbyone = 0;
+#endif
+
 float DPIscale = 96.0f;
 
 // Define the duration in milliseconds for each "second"
@@ -154,6 +161,30 @@ Color colors[] = {
     {150, 150, 150}   // 23 = analyzer peak dots
 };
 
+// Define osccolors array outside of any function
+Color osccolors[17];
+
+// Initialize the osccolors array
+void InitializeOscColors(Color colors[]) {
+    osccolors[0] = colors[21];
+    osccolors[1] = colors[21];
+    osccolors[2] = colors[20];
+    osccolors[3] = colors[20];
+    osccolors[4] = colors[19];
+    osccolors[5] = colors[19];
+    osccolors[6] = colors[18];
+    osccolors[7] = colors[18];
+    osccolors[8] = colors[19];
+    osccolors[9] = colors[19];
+    osccolors[10] = colors[20];
+    osccolors[11] = colors[20];
+    osccolors[12] = colors[21];
+    osccolors[13] = colors[21];
+    osccolors[14] = colors[22];
+    osccolors[15] = colors[22];
+    osccolors[16] = colors[22];
+}
+
 void GetSkinColors() {
     unsigned char* colorBytes = (unsigned char*)SendMessage(hwnd_winamp, WM_WA_IPC, 10, IPC_GET_GENSKINBITMAP);
 
@@ -168,6 +199,9 @@ void GetSkinColors() {
             colors[i].b = colorBytes[i * 3 + 2];
         }
     }
+    
+    // Update osccolors with the new skin colors
+    InitializeOscColors(colors);
 }
 
 // Function to convert Color array to COLORREF array
@@ -177,31 +211,6 @@ COLORREF* convertToCOLORREF(const Color* colors, int size) {
         colorRefs[i] = RGB(colors[i].r, colors[i].g, colors[i].b);
     }
     return colorRefs;
-}
-
-// Function to return the osc_colors array
-COLORREF* osccolors(const Color* colors) {
-    static Color osc_colors[17];
-
-    osc_colors[0] = colors[21];
-    osc_colors[1] = colors[21];
-    osc_colors[2] = colors[20];
-    osc_colors[3] = colors[20];
-    osc_colors[4] = colors[19];
-    osc_colors[5] = colors[19];
-    osc_colors[6] = colors[18];
-    osc_colors[7] = colors[18];
-    osc_colors[8] = colors[19];
-    osc_colors[9] = colors[19];
-    osc_colors[10] = colors[20];
-    osc_colors[11] = colors[20];
-    osc_colors[12] = colors[21];
-    osc_colors[13] = colors[21];
-    osc_colors[14] = colors[22];
-    osc_colors[15] = colors[22];
-    osc_colors[16] = colors[22];
-
-    return convertToCOLORREF(osc_colors, 17);
 }
 
 // Function to release memory allocated for COLORREF array

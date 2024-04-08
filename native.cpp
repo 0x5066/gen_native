@@ -12,7 +12,8 @@ int init() {
 
     GetSkinColors();
 
-    COLORREF* oscColors = osccolors(colors);
+    //COLORREF* oscColors = osccolors(colors);
+    InitializeOscColors(colors);
 
     WinampMenu = (HMENU)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_HMENU);
 
@@ -28,11 +29,10 @@ int init() {
     /* Note: In Winamp 5.0+ this is unneccesary as it is more intelligent when
        it comes to menus, but you must do it so it works with older versions. */
     SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_ADJUST_OPTIONSMENUPOS);
-    // Perform initialization tasks here
 
     lpOldWinampWndProc = WNDPROC(SetWindowLongPtr(plugin.hwndParent, GWLP_WNDPROC, int(WinampSubclass)));
 
-    return GEN_INIT_SUCCESS; // Indicate successful initialization
+    return GEN_INIT_SUCCESS;
 }
 
 void quit()
@@ -165,7 +165,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     case WM_TIMER: {
         if (wParam == ID_TIMER) {
             if (hMainBox) {
-                SetWindowTextW(hwnd, CreateSongTickerText().c_str());
+                //SetWindowTextW(hwnd, CreateSongTickerText().c_str());
                 bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
                 smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
                 curvol = IPC_GETVOLUME(hwnd_winamp);
@@ -183,7 +183,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 SendMessage(hTrackBar3, TBM_SETPOS, TRUE, getOutputTimePercentage());
                 CheckDlgButton(hwnd, IDC_EQ, IsEQVisible() ? BST_CHECKED : BST_UNCHECKED);
                 CheckDlgButton(hwnd, IDC_PL, IsPLEditVisible() ? BST_CHECKED : BST_UNCHECKED);
-                GetSkinColors();
+                //GetSkinColors();
                 if (res == 1) {
                     EnableWindow(hTrackBar3, TRUE);
                 }
@@ -418,14 +418,6 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         break;
     }
 
-// how though?
-/*         case WM_WA_IPC:
-    if (lParam == IPC_SKIN_CHANGED) {
-        GetSkinColors();
-        return 0;
-    }
-    break; */
-
     default:
         return FALSE;
     }
@@ -453,6 +445,13 @@ LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             return 0;
         }
         break;
+
+    // nvm figured it out lol
+    case WM_WA_IPC: 
+    if (lParam == IPC_SKIN_CHANGED) {
+        GetSkinColors();
+        //MessageBox(hwnd, "skin changed", "", MB_OK);
+        }
     }
 
     /* Call previous window procedure */
@@ -657,12 +656,16 @@ void DrawMainBox(HWND hMainBox, int res) {
     // Draw the rectangle around the visualizer area
     //FillRect(hdcBuffer, &textRect, hBrushBg2);
 
-    for (int y = 19; y < 37; y++) {
-        SetPixel(hdcBuffer, (11 * 2) * DPIscale, (y * 2) * DPIscale, RGB(0, 0, 0));
+    // Draw vertical lines with increased spacing
+    for (int y = 19; y < 37; y += 2) {
+        RECT rect = createRect((11 * 2) * DPIscale, (y * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
+        FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
     }
 
-    for (int x = 11; x < 89; x++) {
-        SetPixel(hdcBuffer, (x * 2) * DPIscale, (37 * 2) * DPIscale, RGB(0, 0, 0));
+    // Draw horizontal lines with increased spacing
+    for (int x = 11; x < 90; x += 2) {
+        RECT rect = createRect((x * 2) * DPIscale, (37 * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
+        FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
     }
 
     /* MoveToEx(hdcBuffer, 22, 38, NULL);
@@ -732,48 +735,51 @@ void DrawMainBox(HWND hMainBox, int res) {
         DeleteDC(hdcBitmap);
         DeleteObject(hResBitmap);
     }
+    // Step 1: Create a compatible DC and a compatible bitmap
+    HDC hdcMem = CreateCompatibleDC(hdcBuffer);
+    HBITMAP hBitmapNewSurface = CreateCompatibleBitmap(hdcBuffer, 76, 16);
+    SelectObject(hdcMem, hBitmapNewSurface);
+    FillRect(hdcMem, &rc, hBrushBg);
 
-    for (int x = 0; x < 75; x++) {
+        if (VisMode == 2) {
+
+        // Draw oscilloscope data
+        for (int x = 0; x < 75; x++) {
         signed char y;
-        if (sadata) {
-            y = sadata[x + 75];
-        }
-        else {
-            y = 0;
-        }
+            if (sadata) {
+                y = sadata[x + 75];
+            }
+            else {
+                y = 0;
+            }
 
         int intValue = y + 7;
         intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
 
-        // Calculate the endpoint of the line based on intValue
-        int endpointY = ((intValue * 2) + 40) * DPIscale; // Adjusted for starting at y=42
-
-        if (VisMode == 2) {
-            // Get the array of colors for osci
-            COLORREF* oscColors = osccolors(colors);
-            // Select the color from oscColors based on intValue
-            COLORREF lineColor = oscColors[intValue];
-
-            // Set the line color
-            HPEN hPen = CreatePen(PS_SOLID, DPIscale, lineColor); // Adjust pen width based on DPI scale
-            HPEN hOldPen = (HPEN)SelectObject(hdcBuffer, hPen);
-
-            // Grab the first point of sadata so that we don't have a weird
-            // line that's just static
             if (x == 0) {
-                MoveToEx(hdcBuffer, 26 * DPIscale, (40 + (intValue * 2)) * DPIscale, NULL); // Adjust coordinates based on DPI scale
-            }
-            else {
-                LineTo(hdcBuffer, ((x * 2) + 26) * DPIscale, endpointY); // Adjust coordinates based on DPI scale
+                last_y = intValue; // Use intValue directly
             }
 
-            // Restore the original pen
-            SelectObject(hdcBuffer, hOldPen);
-            DeleteObject(hPen);
-            // Release memory allocated for oscColors array
-            releaseColorRefs(oscColors);
+            top = intValue; // Use intValue directly
+            bottom = last_y;
+            last_y = intValue;
+
+            if (bottom < top) {
+                int temp = bottom;
+                bottom = top;
+                top = temp + 1;
+            }
+
+            for (int dy = top; dy <= bottom; dy++) {
+            int color_index = intValue; // Assuming dy starts from 0
+            COLORREF scope_color = RGB(osccolors[color_index].r, osccolors[color_index].g, osccolors[color_index].b);
+            RECT rect = createRect(x, dy, 1, 1); // Rectangles of width 2px and height 2px
+            HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+            FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
+            DeleteObject(hBrush); // Delete the brush to release resources
         }
-    }
+            }
+        }
 
     static float sapeaks[150];
     static char safalloff[150];
@@ -815,62 +821,43 @@ void DrawMainBox(HWND hMainBox, int res) {
         }
 
         int intValue = -y + 17;
-        int intValue2 = -y2 + 16;
+        int intValue2 = -y2 + 15;
 
         int bottom = 17;
-        if (VisMode == 1) {
-            for (int dy = intValue; dy <= bottom; ++dy) {
-                int color_index = dy; // Assuming dy starts from 0
-                COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
 
-                RECT analyzer = createRect(26 * DPIscale + (x * 2) * DPIscale, 70 * DPIscale, 2 * DPIscale, (((dy * 2) + 36) - 70) * DPIscale); // Define the rectangle
-                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
-                FillRect(hdcBuffer, &analyzer, hBrush); // Fill the rectangle with the brush color
-                DeleteObject(hBrush); // Delete the brush to release resources
-            }
+    // Step 2: Draw the rectangles onto the bitmap
+    if (VisMode == 1) {
+        for (int dy = intValue; dy <= bottom; ++dy) {
+            int color_index = dy + 1; // Assuming dy starts from 0
+            COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
 
-            // Draw peaks using a single color
-            if (intValue2 >= 16) {
-                continue;
-            }
+            RECT analyzer = createRect(x, 15 + rectoffsetbyone, 1, dy - 17); // Define the rectangle
+            HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+            FillRect(hdcMem, &analyzer, hBrush); // Fill the rectangle with the brush color
+            DeleteObject(hBrush); // Delete the brush to release resources
+        }
+
+        // Draw peaks using a single color
+        if (intValue2 < 15) {
             // why is there a weird off by one error in windows that doesn't show up in wine?????
-            const RECT peaks = createRect(26 * DPIscale + (x * 2) * DPIscale, (37 + intValue2 * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
+            const RECT peaks = createRect(x, intValue2, 1, 1);
             COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
             HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);
-            FillRect(hdcBuffer, &peaks, hBrushPeaks);
+            FillRect(hdcMem, &peaks, hBrushPeaks);
             DeleteObject(hBrushPeaks);
         }
+    }
+
     } if (VisMode == 3) {
         // SORRY NOTHING
     }
 
-    // Draw oscilloscope data
-/*  if (sadata) {
-        for (int x = 0; x < 75; x++) {
-            signed char y = sadata[x + 75];
-            int intValue = y + 6;
-            intValue = intValue < 0 ? 0 : (intValue > 16 - 1 ? 16 - 1 : intValue);
+    // Step 3: Use StretchBlt to transfer the content of the bitmap onto the target surface with scaling
+    StretchBlt(hdcBuffer, 13*2*DPIscale, 20*2*DPIscale, 76*2*DPIscale, 16*2*DPIscale, hdcMem, 0, 0, 76, 16, SRCCOPY);
 
-            if (x == 0) {
-                last_y = intValue; // Use intValue directly
-            }
-
-            top = intValue; // Use intValue directly
-            bottom = last_y;
-            last_y = intValue;
-
-            if (bottom < top) {
-                int temp = bottom;
-                bottom = top;
-                top = temp + 1;
-            }
-
-            for (int dy = top; dy <= bottom; dy++) {
-                RECT rect = {(x * 2) + 26, (dy * 2) + 40, (x * 2) + 26 + 2, (dy * 2) + 40 + 2}; // Rectangles of width 2px and height 2px
-                FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH)); // Draw the rectangle
-            }
-        }
-    } */
+    // Step 4: Cleanup
+    DeleteObject(hBitmapNewSurface);
+    DeleteDC(hdcMem);
 
     drawClutterbar(hdcBuffer, 6, 2, 30, height, L"OAIDV");
     // Copy the off-screen buffer to the screen
