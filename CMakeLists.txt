@@ -30,6 +30,7 @@ else()
 endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "") # Prevent CMake from prepending "lib" to the binary name 
+set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".dll") # Prevent cross-compilers from adding the wrong suffix (".so") to the binary name 
 target_link_libraries(${PROJECT_NAME} -static shlwapi comctl32)
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION "${WINAMP_INSTALL_DIR}/Plugins")
