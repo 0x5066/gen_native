@@ -21,7 +21,7 @@ int init() {
     MENUITEMINFO mii;
     mii.cbSize = sizeof(MENUITEMINFO);
     mii.fMask = MIIM_TYPE | MIIM_ID;
-    mii.dwTypeData = PLUGIN_CAPTION;
+    mii.dwTypeData = LPSTR(PLUGIN_CAPTION);
     mii.fType = MFT_STRING;
     mii.wID = MENUID_MYITEM;
 
@@ -31,7 +31,7 @@ int init() {
        it comes to menus, but you must do it so it works with older versions. */
     SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_ADJUST_OPTIONSMENUPOS);
 
-    lpOldWinampWndProc = WNDPROC(SetWindowLongPtr(plugin.hwndParent, GWLP_WNDPROC, int(WinampSubclass)));
+    lpOldWinampWndProc = WNDPROC(SetWindowLongPtr(plugin.hwndParent, GWLP_WNDPROC, reinterpret_cast<intptr_t>(&WinampSubclass)));
 
     return GEN_INIT_SUCCESS;
 }
