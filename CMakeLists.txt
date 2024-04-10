@@ -19,7 +19,6 @@ else()
             "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc"
         COMMAND ${CMAKE_RC_COMPILER} "-i" "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res" "-o" "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc"
         DEPENDS
-            ${CMAKE_RC_COMPILER}
             "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res"
     )
     add_custom_target(resources

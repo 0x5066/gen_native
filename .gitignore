@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 *.dll
 *_x64.*
+
+# cmake
+build/

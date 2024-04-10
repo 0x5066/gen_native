@@ -60,7 +60,7 @@ void OpenMyDialog()
         /* Toggle dialog. If it's created, destroy it. */
         DestroyWindow(hwndCfg);
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
-        SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT); // Reset parent
+        //SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT); // Reset parent
         return;
     }
 
@@ -82,7 +82,7 @@ void OpenMyDialog()
 
         ShowWindow(hwndCfg, SW_SHOW);
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_CHECKED);
-        SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)hwndCfg, IPC_SETDIALOGBOXPARENT); // Set parent
+        //SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)hwndCfg, IPC_SETDIALOGBOXPARENT); // Set parent
     }
     else {
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
@@ -173,9 +173,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     case WM_TIMER: {
         if (wParam == ID_TIMER) {
             if (hMainBox) {
-                if (modern){
-                    SetWindowTextW(hwnd, CreateSongTickerText().c_str());
-                }
+                SetWindowTextW(hwnd, CreateSongTickerText().c_str());
                 bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
                 smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
                 curvol = IPC_GETVOLUME(hwnd_winamp);
@@ -342,7 +340,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         CheckMenuItem(WinampMenu, MENUID_MYITEM, MF_BYCOMMAND | MF_UNCHECKED);
         DestroyWindow(hwnd);
         // Reset the parent back to the original Winamp window
-        SendMessage(hwnd_winamp, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT);
+        //SendMessage(hwnd_winamp, WM_WA_IPC, (WPARAM)NULL, IPC_SETDIALOGBOXPARENT);
         break;
 
     case WM_PAINT: {
@@ -461,9 +459,6 @@ LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
         if (lParam == IPC_SKIN_CHANGED) {
             GetSkinColors();
             modern = modernskinyesno();
-            if (!modern){
-                SendMessage(plugin.hwndParent, WM_WA_IPC, (WPARAM)hwndCfg, IPC_SETDIALOGBOXPARENT); // Set parent
-            }
         }
     break;
 
@@ -654,10 +649,10 @@ void DrawMainBox(HWND hMainBox, int res) {
 
     // Set timeText to flashing SongTimer if Winamp is paused
     if (res == 3 && elapsedTime % SECOND_DURATION < SECOND_DURATION / 2) {
-        timeText = L"  :  "; // Flashing SongTimer
+        timeText = L"\u2007\u2007:\u2007\u2007"; // Flashing SongTimer
     }
     else {
-        timeText = (res == 0) ? L"  :  " : infoText; // Default to infoText or SongTimer
+        timeText = (res == 0) ? L"\u2007\u2007:\u2007\u2007" : infoText; // Default to infoText or SongTimer
     }
 
     DrawTextW(hdcBuffer, timeText.c_str(), timeText.size(), &textRect, DT_RIGHT | DT_TOP);
