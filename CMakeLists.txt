@@ -10,19 +10,23 @@ project(gen_native LANGUAGES CXX)
 
 if(MSVC)
     add_library(${PROJECT_NAME} SHARED native.cpp)
-    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_OPTIONS "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res")
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_OPTIONS "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res" "${CMAKE_CURRENT_SOURCE_DIR}/testpage.res")
 else()
     file(TOUCH "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc")
-    add_library(${PROJECT_NAME} SHARED native.cpp "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc")
+    file(TOUCH "${CMAKE_CURRENT_BINARY_DIR}/testpage.rc")
+    add_library(${PROJECT_NAME} SHARED native.cpp "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc" "${CMAKE_CURRENT_BINARY_DIR}/testpage.rc")
     add_custom_command(
         OUTPUT
             "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc"
         COMMAND ${CMAKE_RC_COMPILER} "-i" "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res" "-o" "${CMAKE_CURRENT_BINARY_DIR}/mainwnd.rc"
+        COMMAND ${CMAKE_RC_COMPILER} "-i" "${CMAKE_CURRENT_SOURCE_DIR}/testpage.res" "-o" "${CMAKE_CURRENT_BINARY_DIR}/testpage.rc"
         DEPENDS
             "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res"
+            "${CMAKE_CURRENT_SOURCE_DIR}/testpage.res"
     )
     add_custom_target(resources
         DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/mainwnd.res"
+        DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/testpage.res"
     )
 
     set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_OPTIONS "$<$<BOOL:${LEGACY_MODE}>:-m32>" LINK_OPTIONS "$<$<BOOL:${LEGACY_MODE}>:-m32>")

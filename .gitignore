@@ -402,3 +402,4 @@ FodyWeavers.xsd
 
 # cmake
 build/
+mainwnd.rc

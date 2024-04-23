@@ -3,6 +3,7 @@
 #endif
 
 #include <windows.h>
+#include <windowsx.h>
 #include <winuser.h>
 #include <commctrl.h>
 #include <shlwapi.h>
@@ -26,8 +27,11 @@
 #define PLUGIN_CAPTION "Main Window (Native)"
 // Timer ID
 #define ID_TIMER 1
+#define ID_TIMER2 2
 
 HWND hwnd_winamp = FindWindow("Winamp v1.x", NULL); // find winamp
+
+prefsDlgRecW *prefsRec = NULL;
 
 // Function declarations
 void config(void);
@@ -78,12 +82,7 @@ float GetWindowDPI(HWND hWnd) {
 bool modernskinyesno();
 bool modern;
 
-// thanks wine.
-#ifdef _MSC_VER
-int rectoffsetbyone = 1;
-#else
-int rectoffsetbyone = 0;
-#endif
+int rectoffsetbyone;
 
 float DPIscale = 96.0f;
 
@@ -100,12 +99,14 @@ int sourceY = 0; // Y-coordinate of the top-left corner of the portion
 int sourceWidth = 0; // Width of the portion
 int sourceHeight = 0; // Height of the portion
 
+bool sa_thick = true;
+
 RECT textRect;
 
 static WNDPROC lpOldWinampWndProc; /* Important: Old window procedure pointer */
 INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK WinampSubclass(HWND, UINT, WPARAM, LPARAM);
-LRESULT CALLBACK MainBoxProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 HMENU WinampMenu = NULL;
 HWND hMainBox = NULL;
@@ -116,6 +117,8 @@ HWND hSongTicker = NULL;
 HWND hTrackBar = NULL;
 HWND hTrackBar2 = NULL;
 HWND hTrackBar3 = NULL;
+
+HWND hTestBox = NULL;
 
 // Define the RECT with DPI scaling applied
 //UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);

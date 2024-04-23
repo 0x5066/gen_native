@@ -31,6 +31,41 @@ int init() {
        it comes to menus, but you must do it so it works with older versions. */
     SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_ADJUST_OPTIONSMENUPOS);
 
+    // Allocate memory for the preferences dialog structure
+    prefsRec = (prefsDlgRecW*)GlobalAlloc(GPTR, sizeof(prefsDlgRecW));
+    if (!prefsRec) {
+        // Handle memory allocation failure
+        return GEN_INIT_FAILURE;
+    }
+
+    // Populate the preferences dialog structure
+    prefsRec->hInst = plugin.hDllInstance; // Assuming your plugin instance
+    prefsRec->dlgID = IDD_TESTPAGE; // Resource identifier of your dialog
+    prefsRec->proc = (void *)TestWndProc; // Cast the function pointer to void*
+    prefsRec->name = L"Native Skin(?)"; // Use wide string literal by prefixing with L
+    prefsRec->where = 2; // Add to General Preferences
+
+    OutputDebugStringW(prefsRec->name);
+
+    static const char *(*pwine_get_version)(void);
+    HMODULE hntdll = GetModuleHandle("ntdll.dll");
+    if (!hntdll) {
+        puts("Not running on NT.");
+        return 1;
+    }
+
+    pwine_get_version = (const char *(*)())GetProcAddress(hntdll, "wine_get_version");
+    if (pwine_get_version) {
+        printf("Running on Wine... %s\n", pwine_get_version());
+        rectoffsetbyone = 0; // Set rectoffsetbyone to 1 if running on Wine
+    } else {
+        puts("Did not detect Wine.");
+        rectoffsetbyone = 1; // Set rectoffsetbyone to 0 if not running on Wine
+    }
+
+    // Add the preferences dialog to Winamp
+    SendMessage(plugin.hwndParent, WM_WA_IPC, reinterpret_cast<WPARAM>(prefsRec), IPC_ADD_PREFS_DLGW);
+
     lpOldWinampWndProc = WNDPROC(SetWindowLongPtr(plugin.hwndParent, GWLP_WNDPROC, reinterpret_cast<intptr_t>(&WinampSubclass)));
 
     return GEN_INIT_SUCCESS;
@@ -432,6 +467,116 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     return TRUE;
 }
 
+INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+
+    switch (msg) {
+    case WM_INITDIALOG:
+        SetTimer(hwnd, ID_TIMER2, 16, NULL);
+        hTestBox = GetDlgItem(hwnd, IDC_TESTSTATIC);
+
+        CheckDlgButton(hwnd, IDC_THICKCHECK, sa_thick ? BST_CHECKED : BST_UNCHECKED);
+
+        // Specify that we want both spectrum and oscilloscope data
+        // Get function pointers from Winamp
+        if (!export_sa_get)
+            export_sa_get = (char* (*)(void))SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GETSADATAFUNC);
+        if (!export_sa_setreq)
+            export_sa_setreq = (void (*)(int))SendMessage(plugin.hwndParent, WM_WA_IPC, 1, IPC_GETSADATAFUNC);
+        // Specify that we want both spectrum and oscilloscope data
+        export_sa_setreq(1); // Pass 1 to get both spectrum and oscilloscope data
+        return TRUE;
+
+    case WM_TIMER: {
+        if (wParam == ID_TIMER2) {
+            InvalidateHWND(hTestBox, hwnd);
+        }
+        return TRUE;
+    }
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+            // remember, checkboxes, radiobuttons, etc, always go in here!
+            case IDC_THICKCHECK:
+            // Checkbox state changed, update global variable
+            sa_thick = (IsDlgButtonChecked(hwnd, IDC_THICKCHECK) == BST_CHECKED);
+            return TRUE;
+        }
+
+    case WM_PAINT: {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hTestBox, &ps);
+
+            RECT rc;
+            GetClientRect(hTestBox, &rc);
+            int width = rc.right - rc.left;
+            int height = rc.bottom - rc.top;
+
+            // Create a memory device context for double buffering
+            HDC hdcBuffer = CreateCompatibleDC(hdc);
+            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+            char* sadata;
+
+            HBRUSH hBrushBg = CreateSolidBrush(RGB(0, 0, 0));
+            FillRect(hdcBuffer, &rc, hBrushBg);
+
+            // Get SA data
+            sadata = export_sa_get();
+
+                // Draw oscilloscope data
+                for (int x = 0; x < 150; x++) {
+                signed char y;
+                    if (sadata) {
+                        y = sadata[x];
+                    }
+                    else {
+                        y = 0;
+                    }
+
+                    int intValue = y + 17;
+                    if (x < 75){
+                        intValue = intValue - 17;
+                    }
+                    if (intValue >= 18) {
+                        top = 18;
+                        bottom = intValue;
+                    } else {
+                        top = intValue;
+                        bottom = 17;
+                    }
+                    intValue = intValue < 0 ? 0 : (intValue > height - 1 ? height - 1 : intValue);
+
+                    
+                    for (int dy = top; dy <= bottom; dy++) {
+                        SetPixel(hdcBuffer, x, dy, RGB(0,255,0));
+                    }
+                }
+
+            // Copy the off-screen buffer to the screen
+            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+
+            // Clean up
+            SelectObject(hdcBuffer, hOldBitmap);
+            DeleteObject(hBitmap);
+            DeleteDC(hdcBuffer);
+            DeleteObject(hBrushBg);
+
+            EndPaint(hTestBox, &ps);
+        return 0;
+    }
+
+    case WM_DPICHANGED: {
+        //UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+        DPIscale = HIWORD(wParam) / 96.0f;
+        //std::string dpiscalestr = std::to_string(HIWORD(wParam) / 96.0f);
+        //MessageBox(hwnd, dpiscalestr.c_str(), "", MB_OK);
+        break;
+    }
+
+    }
+    return FALSE;
+}
+
 LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 
@@ -684,9 +829,40 @@ void DrawMainBox(HWND hMainBox, int res) {
     /* MoveToEx(hdcBuffer, 22, 76, NULL);
     LineTo(hdcBuffer, 180, 76); */
     // Load the bitmap from the resource
-    HBITMAP hResBitmap = LoadBitmap(plugin.hDllInstance, MAKEINTRESOURCE(IDB_PLAYPAUS));
+    //HBITMAP hResBitmap = LoadBitmap(plugin.hDllInstance, MAKEINTRESOURCE(IDB_PLAYPAUS));
 
-    if (hResBitmap)
+    HBRUSH hBrushTxtclr = CreateSolidBrush(sysTextColor);
+    if (res == 1) {
+
+        HPEN hPen = CreatePen(PS_SOLID, 0, sysTextColor);
+        HPEN hOldPen = SelectPen(hdcBuffer, hPen);
+
+        HBRUSH hOldBrush = SelectBrush(hdcBuffer, hBrushTxtclr);
+
+        POINT vertices[] = { {38 * DPIscale, 26 * DPIscale}, {38 * DPIscale, 10 * DPIscale}, {46 * DPIscale, 18 * DPIscale} };
+        Polygon(hdcBuffer, vertices, sizeof(vertices) / sizeof(vertices[0]));
+
+        SelectBrush(hdcBuffer, hOldBrush);
+
+        SelectPen(hdcBuffer, hOldPen);
+        DeleteObject(hPen);
+
+        RECT playblock = {26 * DPIscale, 10 * DPIscale, 26 * DPIscale + 6 * DPIscale, 10 * DPIscale + 6 * DPIscale};
+        FillRect(hdcBuffer, &playblock, hBrushTxtclr);
+
+    } else if (res == 0) {
+        RECT stopped = {34 * DPIscale, 14 * DPIscale, 34 * DPIscale + 10 * DPIscale, 14 * DPIscale + 10 * DPIscale};
+        FillRect(hdcBuffer, &stopped, hBrushTxtclr);
+    } else if (res == 3) {
+        RECT rect1 = {30 * DPIscale, 14 * DPIscale, 30 * DPIscale + 6 * DPIscale, 14 * DPIscale + 10 * DPIscale}; // x, y, width, height
+        RECT rect2 = {42 * DPIscale, 14 * DPIscale, 42 * DPIscale + 6 * DPIscale, 14 * DPIscale + 10 * DPIscale}; // x, y, width, height
+        FillRect(hdcBuffer, &rect1, hBrushTxtclr);
+        FillRect(hdcBuffer, &rect2, hBrushTxtclr);
+    }
+
+    DeleteObject(hBrushTxtclr);
+
+/*     if (hResBitmap)
     {
         // Get the dimensions of the bitmap
         BITMAP bmpInfo;
@@ -744,12 +920,32 @@ void DrawMainBox(HWND hMainBox, int res) {
         SelectObject(hdcBitmap, hOldBitmap);
         DeleteDC(hdcBitmap);
         DeleteObject(hResBitmap);
-    }
+    } */
     // Step 1: Create a compatible DC and a compatible bitmap
     HDC hdcMem = CreateCompatibleDC(hdcBuffer);
     HBITMAP hBitmapNewSurface = CreateCompatibleBitmap(hdcBuffer, 76, 16);
     SelectObject(hdcMem, hBitmapNewSurface);
     FillRect(hdcMem, &rc, hBrushBg);
+
+// thinking about it
+/*     for (int x = 0; x < 76; ++x) {
+        for (int y = 0; y < 16; ++y) {
+            if (x % 2 == 1 || y % 2 == 0) {
+                COLORREF scope_color = RGB(colors[0].r, colors[0].g, colors[0].b);
+                RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
+                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+                FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
+                DeleteObject(hBrush); // Delete the brush to release resources
+            }
+            else {
+                COLORREF scope_color = RGB(colors[1].r, colors[1].g, colors[1].b);
+                RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
+                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+                FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
+                DeleteObject(hBrush); // Delete the brush to release resources
+            }
+        }
+    } */
 
         if (VisMode == 2) {
 
@@ -795,12 +991,48 @@ void DrawMainBox(HWND hMainBox, int res) {
     static char safalloff[150];
     static char sapeaksdec[150];
     signed char sadata2[150];
+    int i;
+    // this here is largely based on ghidra's output from the 5.666 winamp.exe
+    // plus some extra stuff like preventing to also catch the oscilloscope data
+    uint8_t uVar12;
 
     for (int x = 0; x < 75; x++) {
+        i = x & 0xfffffffc; // this is just -4
         if (sadata) {
-            sadata2[x] = sadata[x];
-        }
-        else {
+            if (sa_thick == true) {
+                if (i < (75 - 3)) {
+                    // Calculate the average of every 4 elements in sadata
+                    // will i ever optimize this? probably not
+                    uVar12 =  (int)((u_int)*(byte *)(i + 3 + sadata) +
+                                    (u_int)*(byte *)(i + 2 + sadata) +
+                                    (u_int)*(byte *)(i + 1 + sadata) +
+                                    (u_int)*(byte *)(i + sadata)) >> 2;
+                    // Store the calculated value in sadata2 if x is not the last index of the group of 4
+
+                    // admittedly this is a hacky way of not showing the in-between stuff
+                    // but for now i can't read what they did to make it work as seamless as it did
+                    // switching between thick and thin bands would still show the in-between area
+                    // where there's nothing displayed in thick bands
+                    sadata2[x] = (x == i + 3) ? 0 : uVar12;
+                } else {
+                    uVar12 = 0; // Initialize uVar12 to a default value
+                    // uVar12 is set to 0 or else we just get data from 
+                    // the previous iteration and it looks really ugly
+                    int numElements = 0;
+                    // Loop through available elements and calculate sum
+                    for (int j = i; j < 75; j++) {
+                        uVar12 += sadata[j];
+                        numElements++;
+                    }
+                    // Calculate the average of available elements
+                    uVar12 /= numElements; // Divide by the number of available elements
+                    // Store the calculated value in sadata2
+                    sadata2[x] = uVar12;
+                }
+            } else if (sa_thick == false) { // Use else if instead of separate if conditions
+                sadata2[x] = sadata[x];
+            }
+        } else {
             sadata2[x] = 0;
         }
 
@@ -849,7 +1081,6 @@ void DrawMainBox(HWND hMainBox, int res) {
 
         // Draw peaks using a single color
         if (intValue2 < 15) {
-            // why is there a weird off by one error in windows that doesn't show up in wine?????
             const RECT peaks = createRect(x, intValue2, 1, 1);
             COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
             HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);

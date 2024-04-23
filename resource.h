@@ -9,6 +9,11 @@
 #define IDC_MONO            1007
 #define IDC_STEREO          1008
 
+// PLUGIN PREFS
+#define IDD_TESTPAGE        102
+#define IDC_TESTSTATIC      1300
+#define IDC_THICKCHECK      1301
+
 // PLAYER BUTTONS
 
 #define IDC_PREV            1100
