@@ -42,6 +42,9 @@ void DrawMainBox(HWND hMainBox, int res);
 void DrawBitrate(HWND hBitrate, int res, int bitr);
 void DrawSamplerate(HWND hSamplerate, int res, int smpr);
 void DrawSongTicker(HWND hSongTicker);
+void config_getinifnW(wchar_t* ini_file);
+void config_read();
+void config_write();
 std::wstring formatTime(int milliseconds);
 //const wchar_t* GetSongLength();
 std::wstring CreateSongTickerText();
@@ -66,6 +69,8 @@ int monoster = SendMessage(hwnd_winamp,WM_WA_IPC,2,IPC_GETINFO);
 int repeat = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_REPEAT);
 // gets shuffle state
 int shuffle = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_SHUFFLE);
+// gets sync status
+int sync = SendMessage(hwnd_winamp,WM_WA_IPC,6,IPC_GETINFO);
 int VisMode = 1;
 int TimeMode = 0;
 LRESULT trackLengthMS = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
@@ -100,6 +105,12 @@ int sourceWidth = 0; // Width of the portion
 int sourceHeight = 0; // Height of the portion
 
 bool sa_thick = true;
+bool modernsize = false;
+int vis_size = 75;
+bool native = false;
+bool peaksatzero = false;
+int peakthreshold = 15;
+bool drawvisgrid = false;
 
 RECT textRect;
 
@@ -210,6 +221,42 @@ void GetSkinColors() {
     InitializeOscColors(colors);
 }
 
+Color BlendColors(const Color& color1, const Color& color2, float ratio) {
+    // Blend the colors using a weighted average
+    Color blendedColor;
+    blendedColor.r = static_cast<unsigned char>((1.0f - ratio) * color1.r + ratio * color2.r);
+    blendedColor.g = static_cast<unsigned char>((1.0f - ratio) * color1.g + ratio * color2.g);
+    blendedColor.b = static_cast<unsigned char>((1.0f - ratio) * color1.b + ratio * color2.b);
+    return blendedColor;
+}
+
+// Helper function to convert DWORD color to Color structure
+Color ConvertDWORDToColor(DWORD colorValue) {
+    Color color;
+    color.r = GetRValue(colorValue);
+    color.g = GetGValue(colorValue);
+    color.b = GetBValue(colorValue);
+    return color;
+}
+
+void BlendAndWriteColors(const Color& color1, const Color& color2, const Color& color3, const Color& color4, Color* colors) {
+    // Blend the colors and write them to the array from the 3rd to the 17th positions
+    for (int i = 2; i < 18; ++i) {
+        float ratio = static_cast<float>(i - 2) / 15.0f; // Calculate blending ratio
+        colors[i] = BlendColors(color1, color2, ratio);
+    }
+    
+    // Blend the additional colors and write them to the array from the 18th to the 22nd positions
+    for (int i = 18; i < 23; ++i) {
+        float ratio = static_cast<float>(i - 18) / 5.0f; // Calculate blending ratio
+        colors[i] = BlendColors(color3, color4, ratio);
+    }
+
+    colors[23] = BlendColors(ConvertDWORDToColor(GetSysColor(COLOR_3DFACE)), color4, 0.5f);
+    colors[0] = ConvertDWORDToColor(GetSysColor(COLOR_WINDOW));
+    colors[1] = BlendColors(ConvertDWORDToColor(GetSysColor(COLOR_3DFACE)), color4, 0.125f);
+}
+
 // Function to convert Color array to COLORREF array
 COLORREF* convertToCOLORREF(const Color* colors, int size) {
     COLORREF* colorRefs = new COLORREF[size];
@@ -231,6 +278,51 @@ RECT createRect(int x, int y, int width, int height) {
     rect.right = x + width;
     rect.bottom = y + height;
     return rect;
+}
+
+void DumpColorsToBMP(const Color* colors, int width, int height, const char* filename) {
+    BITMAPFILEHEADER bfh;
+    BITMAPINFOHEADER bih;
+
+    // File header
+    bfh.bfType = 0x4D42; // "BM"
+    bfh.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + width * height * sizeof(RGBQUAD);
+    bfh.bfReserved1 = 0;
+    bfh.bfReserved2 = 0;
+    bfh.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+
+    // Info header
+    bih.biSize = sizeof(BITMAPINFOHEADER);
+    bih.biWidth = width;
+    bih.biHeight = height;
+    bih.biPlanes = 1;
+    bih.biBitCount = 24;
+    bih.biCompression = BI_RGB;
+    bih.biSizeImage = 0;
+    bih.biXPelsPerMeter = 0;
+    bih.biYPelsPerMeter = 0;
+    bih.biClrUsed = 0;
+    bih.biClrImportant = 0;
+
+    // Write to file
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+    if (file.is_open()) {
+        file.write(reinterpret_cast<const char*>(&bfh), sizeof(BITMAPFILEHEADER));
+        file.write(reinterpret_cast<const char*>(&bih), sizeof(BITMAPINFOHEADER));
+
+        // Write color data
+        for (int i = height - 1; i >= 0; --i) {
+            for (int j = 0; j < width; ++j) {
+                RGBQUAD rgb;
+                rgb.rgbBlue = colors[i * width + j].b;
+                rgb.rgbGreen = colors[i * width + j].g;
+                rgb.rgbRed = colors[i * width + j].r;
+                file.write(reinterpret_cast<const char*>(&rgb), sizeof(RGBQUAD));
+            }
+        }
+
+        file.close();
+    }
 }
 
 // Plugin description

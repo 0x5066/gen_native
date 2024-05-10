@@ -3,6 +3,8 @@
 
 int init() {
 
+    config_read();
+
     INITCOMMONCONTROLSEX icc;
 
     // Initialise common controls.
@@ -10,11 +12,17 @@ int init() {
     icc.dwICC = ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icc);
 
-    GetSkinColors();
+    if (!native){
+        GetSkinColors();
+        InitializeOscColors(colors);
+    } else {
+        BlendAndWriteColors(ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHTTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), ConvertDWORDToColor(GetSysColor(COLOR_WINDOWTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), colors);
+        InitializeOscColors(colors);
+    }
+
     modern = modernskinyesno();
 
     //COLORREF* oscColors = osccolors(colors);
-    InitializeOscColors(colors);
 
     WinampMenu = (HMENU)SendMessage(plugin.hwndParent, WM_WA_IPC, 0, IPC_GET_HMENU);
 
@@ -77,6 +85,7 @@ void quit()
         DestroyWindow(hwndCfg);
         hwndCfg = NULL;
     }
+    config_write();
 }
 
 void config()
@@ -145,6 +154,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
         smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
         res = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_ISPLAYING);
+        sync = SendMessage(hwnd_winamp,WM_WA_IPC,6,IPC_GETINFO);
         trackLengthMS = SendMessage(plugin.hwndParent, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
         i_trackLengthMS = (int)(trackLengthMS);
         monoster = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETINFO);
@@ -211,6 +221,7 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
                 SetWindowTextW(hwnd, CreateSongTickerText().c_str());
                 bitr = SendMessage(hwnd_winamp, WM_WA_IPC, 1, IPC_GETINFO);
                 smpr = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_GETINFO);
+                sync = SendMessage(hwnd_winamp,WM_WA_IPC,6,IPC_GETINFO);
                 curvol = IPC_GETVOLUME(hwnd_winamp);
                 curpan = IPC_GETPANNING(hwnd_winamp);
                 res = SendMessage(hwnd_winamp, WM_WA_IPC, 0, IPC_ISPLAYING);
@@ -475,6 +486,10 @@ INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         hTestBox = GetDlgItem(hwnd, IDC_TESTSTATIC);
 
         CheckDlgButton(hwnd, IDC_THICKCHECK, sa_thick ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hwnd, IDC_MODERN, modernsize ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hwnd, IDC_NATIVECOLORS, native ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hwnd, IDC_MODERNPEAKS, peaksatzero ? BST_CHECKED : BST_UNCHECKED);
+        CheckDlgButton(hwnd, IDC_VISGRID, drawvisgrid ? BST_CHECKED : BST_UNCHECKED);
 
         // Specify that we want both spectrum and oscilloscope data
         // Get function pointers from Winamp
@@ -497,8 +512,27 @@ INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         switch (LOWORD(wParam)) {
             // remember, checkboxes, radiobuttons, etc, always go in here!
             case IDC_THICKCHECK:
-            // Checkbox state changed, update global variable
-            sa_thick = (IsDlgButtonChecked(hwnd, IDC_THICKCHECK) == BST_CHECKED);
+                // Checkbox state changed, update global variable
+                sa_thick = (IsDlgButtonChecked(hwnd, IDC_THICKCHECK) == BST_CHECKED);
+            return TRUE;
+            case IDC_MODERN:
+                modernsize = (IsDlgButtonChecked(hwnd, IDC_MODERN) == BST_CHECKED);
+            return TRUE;
+            case IDC_NATIVECOLORS:
+                native = (IsDlgButtonChecked(hwnd, IDC_NATIVECOLORS) == BST_CHECKED);
+                if (!native){
+                    GetSkinColors();
+                    InitializeOscColors(colors);
+                    //DumpColorsToBMP(colors, 1, 24, "output.bmp");
+                } else {
+                    BlendAndWriteColors(ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHTTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), ConvertDWORDToColor(GetSysColor(COLOR_WINDOWTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), colors);
+                    InitializeOscColors(colors);
+                    //DumpColorsToBMP(colors, 1, 24, "output.bmp");
+                }
+            case IDC_MODERNPEAKS:
+                peaksatzero = (IsDlgButtonChecked(hwnd, IDC_MODERNPEAKS) == BST_CHECKED);
+            case IDC_VISGRID:
+                drawvisgrid = (IsDlgButtonChecked(hwnd, IDC_VISGRID) == BST_CHECKED);
             return TRUE;
         }
 
@@ -602,7 +636,10 @@ LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
     // nvm figured it out lol
     case WM_WA_IPC: 
         if (lParam == IPC_SKIN_CHANGED) {
-            GetSkinColors();
+            if (!native){
+                GetSkinColors();
+                InitializeOscColors(colors);
+            }
             modern = modernskinyesno();
         }
     break;
@@ -786,6 +823,18 @@ void DrawMainBox(HWND hMainBox, int res) {
         static_cast<LONG>(31 * DPIscale)   // Bottom coordinate scaled according to DPI
     };
 
+    if (modernsize == false) {
+        vis_size = 75;
+    } else {
+        vis_size = 72;
+    }
+
+    if (peaksatzero == false) {
+        peakthreshold = 15;
+    } else {
+        peakthreshold = 16;
+    }
+
     const std::wstring infoText = GetInfoText(TimeMode);
     std::wstring timeText;
 
@@ -814,13 +863,13 @@ void DrawMainBox(HWND hMainBox, int res) {
     // Draw vertical lines with increased spacing
     for (int y = 19; y < 37; y += 2) {
         RECT rect = createRect((11 * 2) * DPIscale, (y * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
-        FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+        FillRect(hdcBuffer, &rect, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
     }
 
     // Draw horizontal lines with increased spacing
     for (int x = 11; x < 90; x += 2) {
         RECT rect = createRect((x * 2) * DPIscale, (37 * 2) * DPIscale, 2 * DPIscale, 2 * DPIscale);
-        FillRect(hdcBuffer, &rect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+        FillRect(hdcBuffer, &rect, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
     }
 
     /* MoveToEx(hdcBuffer, 22, 38, NULL);
@@ -830,14 +879,23 @@ void DrawMainBox(HWND hMainBox, int res) {
     LineTo(hdcBuffer, 180, 76); */
     // Load the bitmap from the resource
     //HBITMAP hResBitmap = LoadBitmap(plugin.hDllInstance, MAKEINTRESOURCE(IDB_PLAYPAUS));
+    HBRUSH hBrushTxtclr;
+    int syncpos;
+    if (sync == 0){
+        syncpos = 10;
+        hBrushTxtclr = CreateSolidBrush(sysTextColor);
+    } else if (sync == 1){
+        syncpos = 21;
+        hBrushTxtclr = GetSysColorBrush(COLOR_HIGHLIGHT);
+    }
 
-    HBRUSH hBrushTxtclr = CreateSolidBrush(sysTextColor);
     if (res == 1) {
 
-        HPEN hPen = CreatePen(PS_SOLID, 0, sysTextColor);
+                                            // THAT is ok???
+        HPEN hPen = CreatePen(PS_SOLID, 0, (COLORREF)(HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
         HPEN hOldPen = SelectPen(hdcBuffer, hPen);
 
-        HBRUSH hOldBrush = SelectBrush(hdcBuffer, hBrushTxtclr);
+        HBRUSH hOldBrush = SelectBrush(hdcBuffer, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
 
         POINT vertices[] = { {38 * DPIscale, 26 * DPIscale}, {38 * DPIscale, 10 * DPIscale}, {46 * DPIscale, 18 * DPIscale} };
         Polygon(hdcBuffer, vertices, sizeof(vertices) / sizeof(vertices[0]));
@@ -847,17 +905,17 @@ void DrawMainBox(HWND hMainBox, int res) {
         SelectPen(hdcBuffer, hOldPen);
         DeleteObject(hPen);
 
-        RECT playblock = {26 * DPIscale, 10 * DPIscale, 26 * DPIscale + 6 * DPIscale, 10 * DPIscale + 6 * DPIscale};
+        RECT playblock = {26 * DPIscale, syncpos * DPIscale, 26 * DPIscale + 6 * DPIscale, syncpos * DPIscale + 6 * DPIscale};
         FillRect(hdcBuffer, &playblock, hBrushTxtclr);
 
     } else if (res == 0) {
         RECT stopped = {34 * DPIscale, 14 * DPIscale, 34 * DPIscale + 10 * DPIscale, 14 * DPIscale + 10 * DPIscale};
-        FillRect(hdcBuffer, &stopped, hBrushTxtclr);
+        FillRect(hdcBuffer, &stopped, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
     } else if (res == 3) {
         RECT rect1 = {30 * DPIscale, 14 * DPIscale, 30 * DPIscale + 6 * DPIscale, 14 * DPIscale + 10 * DPIscale}; // x, y, width, height
         RECT rect2 = {42 * DPIscale, 14 * DPIscale, 42 * DPIscale + 6 * DPIscale, 14 * DPIscale + 10 * DPIscale}; // x, y, width, height
-        FillRect(hdcBuffer, &rect1, hBrushTxtclr);
-        FillRect(hdcBuffer, &rect2, hBrushTxtclr);
+        FillRect(hdcBuffer, &rect1, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
+        FillRect(hdcBuffer, &rect2, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
     }
 
     DeleteObject(hBrushTxtclr);
@@ -927,30 +985,31 @@ void DrawMainBox(HWND hMainBox, int res) {
     SelectObject(hdcMem, hBitmapNewSurface);
     FillRect(hdcMem, &rc, hBrushBg);
 
-// thinking about it
-/*     for (int x = 0; x < 76; ++x) {
-        for (int y = 0; y < 16; ++y) {
-            if (x % 2 == 1 || y % 2 == 0) {
-                COLORREF scope_color = RGB(colors[0].r, colors[0].g, colors[0].b);
-                RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
-                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
-                FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
-                DeleteObject(hBrush); // Delete the brush to release resources
-            }
-            else {
-                COLORREF scope_color = RGB(colors[1].r, colors[1].g, colors[1].b);
-                RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
-                HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
-                FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
-                DeleteObject(hBrush); // Delete the brush to release resources
+    if (drawvisgrid) {
+        for (int x = 0; x < 76; ++x) {
+            for (int y = 0; y < 16; ++y) {
+                if (x % 2 == 1 || y % 2 == 0) {
+                    COLORREF scope_color = RGB(colors[0].r, colors[0].g, colors[0].b);
+                    RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
+                    HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+                    FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
+                    DeleteObject(hBrush); // Delete the brush to release resources
+                }
+                else {
+                    COLORREF scope_color = RGB(colors[1].r, colors[1].g, colors[1].b);
+                    RECT rect = createRect(x, y, 1, 1); // Rectangles of width 2px and height 2px
+                    HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
+                    FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
+                    DeleteObject(hBrush); // Delete the brush to release resources
+                }
             }
         }
-    } */
+    }
 
         if (VisMode == 2) {
 
         // Draw oscilloscope data
-        for (int x = 0; x < 75; x++) {
+        for (int x = 0; x < vis_size; x++) {
         signed char y;
             if (sadata) {
                 y = sadata[x + 75];
@@ -977,67 +1036,51 @@ void DrawMainBox(HWND hMainBox, int res) {
             }
 
             for (int dy = top; dy <= bottom; dy++) {
-            int color_index = intValue; // Assuming dy starts from 0
-            COLORREF scope_color = RGB(osccolors[color_index].r, osccolors[color_index].g, osccolors[color_index].b);
-            RECT rect = createRect(x, dy, 1, 1); // Rectangles of width 2px and height 2px
-            HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
-            FillRect(hdcMem, &rect, hBrush); // Draw the rectangle
-            DeleteObject(hBrush); // Delete the brush to release resources
-        }
+                int color_index = intValue; // Assuming dy starts from 0
+                COLORREF scope_color = RGB(osccolors[color_index].r, osccolors[color_index].g, osccolors[color_index].b);
+                SetPixel(hdcMem, x, dy, scope_color);
+                }
             }
         }
 
-    static float sapeaks[150];
+    static int sapeaks[150];
     static char safalloff[150];
     static char sapeaksdec[150];
-    signed char sadata2[150];
+    int sadata2[150];
+    static float sadata3[150];
     int i;
     // this here is largely based on ghidra's output from the 5.666 winamp.exe
     // plus some extra stuff like preventing to also catch the oscilloscope data
     uint8_t uVar12;
 
-    for (int x = 0; x < 75; x++) {
-        i = x & 0xfffffffc; // this is just -4
+    for (int x = 0; x < vis_size; x++) {
+        // WHY?! WHY DO I HAVE TO DO THIS?! NOWHERE IS THIS IN THE DECOMPILE
+        i = ((i = x & 0xfffffffc) < 72) ? i : 71; // Limiting i to prevent out of bounds access
         if (sadata) {
             if (sa_thick == true) {
-                if (i < (75 - 3)) {
                     // Calculate the average of every 4 elements in sadata
-                    // will i ever optimize this? probably not
-                    uVar12 =  (int)((u_int)*(byte *)(i + 3 + sadata) +
+                    // this used to be unoptimized and came straight out of ghidra
+                    // here's what that looked like
+
+                    /* uVar12 =  (int)((u_int)*(byte *)(i + 3 + sadata) +
                                     (u_int)*(byte *)(i + 2 + sadata) +
                                     (u_int)*(byte *)(i + 1 + sadata) +
-                                    (u_int)*(byte *)(i + sadata)) >> 2;
-                    // Store the calculated value in sadata2 if x is not the last index of the group of 4
+                                    (u_int)*(byte *)(i + sadata)) >> 2; */
 
-                    // admittedly this is a hacky way of not showing the in-between stuff
-                    // but for now i can't read what they did to make it work as seamless as it did
-                    // switching between thick and thin bands would still show the in-between area
-                    // where there's nothing displayed in thick bands
-                    sadata2[x] = (x == i + 3) ? 0 : uVar12;
-                } else {
-                    uVar12 = 0; // Initialize uVar12 to a default value
-                    // uVar12 is set to 0 or else we just get data from 
-                    // the previous iteration and it looks really ugly
-                    int numElements = 0;
-                    // Loop through available elements and calculate sum
-                    for (int j = i; j < 75; j++) {
-                        uVar12 += sadata[j];
-                        numElements++;
-                    }
-                    // Calculate the average of available elements
-                    uVar12 /= numElements; // Divide by the number of available elements
-                    // Store the calculated value in sadata2
+                    uVar12 = sadata[i+3] +
+                            sadata[i+2] +
+                            sadata[i+1] +
+                            sadata[i] >> 2;
+                    // shove the data from uVar12 into sadata2
                     sadata2[x] = uVar12;
-                }
-            } else if (sa_thick == false) { // Use else if instead of separate if conditions
+            } else if (sa_thick == false) { // just copy sadata to sadata2
                 sadata2[x] = sadata[x];
             }
         } else {
-            sadata2[x] = 0;
+            sadata2[x] = 0; // let's not crash when sadata is literally NULL, moreso the case for WACUP but just to be safe
         }
 
         signed char y = safalloff[x];
-        signed char y2 = sapeaks[x];
 
         safalloff[x] = safalloff[x] - 2;
 
@@ -1057,35 +1100,76 @@ void DrawMainBox(HWND hMainBox, int res) {
             safalloff[x] = sadata2[x];
         }
 
-        sapeaks[x] = sapeaks[x] - 1.0f / 5.0f;
-        if (safalloff[x] > sapeaks[x]) {
-            sapeaks[x] = safalloff[x];
+/*
+        ghidra output:
+        peaks = &DAT_0044de98 + uVar10;
+        if (*peaks <= (int)(sum * 0x100)) {
+          *peaks = sum * 0x100;
+          (&DAT_0044d8c4)[uVar10] = 0x40400000;
+        }
+*/
+
+    if (sapeaks[x] <= (int)(safalloff[x] * 256)) {
+        sapeaks[x] = safalloff[x] * 256;
+        sadata3[x] = 3.0f;
+    }
+
+        int intValue2 = -(sapeaks[x]/256) + 15;
+
+/*
+        ghidra output of winamp 2.63's executable:
+        ..
+        local_14[0] = 1.05;
+        local_14[1] = 1.1;
+        local_14[2] = 1.2;
+        local_14[3] = 1.4;
+        local_14[4] = 1.6;
+        ..
+        fVar1 = local_14[sum];
+        if (DAT_0044de7c == 0) {
+            return;
+        }
+        ..
+        lVar20 = __ftol();
+        iVar16 = *peaks - (int)lVar20;
+        *peaks = iVar16;
+        (&DAT_0044d8c4)[uVar10] = fVar1 * (float)(&DAT_0044d8c4)[uVar10];
+        if (iVar16 < 0) {
+          *peaks = 0;
         }
 
-        int intValue = -y + 17;
-        int intValue2 = -y2 + 15;
+*/
 
-        int bottom = 17;
+    sapeaks[x] -= (int)sadata3[x];
+    sadata3[x] *= 1.05f;
+    if (sapeaks[x] < 0) 
+    {
+        sapeaks[x] = 0;
+    }
 
-    // Step 2: Draw the rectangles onto the bitmap
+    // Step 2: plot your pixels directly on the bitmap
     if (VisMode == 1) {
-        for (int dy = intValue; dy <= bottom; ++dy) {
-            int color_index = dy + 1; // Assuming dy starts from 0
-            COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
-
-            RECT analyzer = createRect(x, 15 + rectoffsetbyone, 1, dy - 17); // Define the rectangle
-            HBRUSH hBrush = CreateSolidBrush(scope_color); // Create a brush with the specified color
-            FillRect(hdcMem, &analyzer, hBrush); // Fill the rectangle with the brush color
-            DeleteObject(hBrush); // Delete the brush to release resources
+        if ((x == i + 3 && x < 72) && sa_thick) {
+            // SORRY NOTHING
+            // this is *one* way of skipping rendering
+        }
+        else {
+            for (int dy = -safalloff[x]+16; dy <= 17; ++dy) {
+                int color_index = dy + 2; // Assuming dy starts from 0
+                COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
+                SetPixel(hdcMem, x, dy, scope_color);
+            }
         }
 
+        if ((x == i + 3 && x < 72) && sa_thick) {
+            // SORRY NOTHING
+        }
         // Draw peaks using a single color
-        if (intValue2 < 15) {
-            const RECT peaks = createRect(x, intValue2, 1, 1);
-            COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
-            HBRUSH hBrushPeaks = CreateSolidBrush(peaksColor);
-            FillRect(hdcMem, &peaks, hBrushPeaks);
-            DeleteObject(hBrushPeaks);
+        else {
+            if (intValue2 < peakthreshold) {
+                COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
+                SetPixel(hdcMem, x, intValue2, peaksColor);
+            }
         }
     }
 
@@ -1325,6 +1409,51 @@ void drawClutterbar(HDC hdc, int x, int y, int width, int height, const std::wst
 
     // Cleanup font object
     DeleteObject(hFont);
+}
+
+void config_getinifnW(wchar_t* ini_file) {
+    // Get the Winamp plugin directory
+    wchar_t *plugdir=(wchar_t*)SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GETINIDIRECTORYW);
+
+    // Check if plugdir is valid
+    if (plugdir == nullptr) {
+        // Error handling: Unable to retrieve plugin directory
+        return;
+    }
+
+    // Concatenate the plugin directory with the desired INI file name
+    wcscpy(ini_file, plugdir);
+    wcscat(ini_file, L"\\Plugins\\gen_native.ini");
+}
+
+void config_read() {
+    wchar_t ini_file[MAX_PATH];
+    config_getinifnW(ini_file);
+
+    // Read configuration from the INI file
+    sa_thick = GetPrivateProfileIntW(L"gen_native", L"sa_thick", sa_thick, ini_file);
+    modernsize = GetPrivateProfileIntW(L"gen_native", L"modernsize", modernsize, ini_file);
+    native = GetPrivateProfileIntW(L"gen_native", L"native", native, ini_file);
+    peaksatzero = GetPrivateProfileIntW(L"gen_native", L"peaksatzero", peaksatzero, ini_file);
+    drawvisgrid = GetPrivateProfileIntW(L"gen_native", L"drawvisgrid", drawvisgrid, ini_file);
+}
+
+void config_write() {
+    wchar_t string[32];
+    wchar_t ini_file[MAX_PATH];
+    config_getinifnW(ini_file);
+
+    // Write configuration to the INI file
+    wsprintfW(string, L"%d", sa_thick);
+    WritePrivateProfileStringW(L"gen_native", L"sa_thick", string, ini_file);
+    wsprintfW(string, L"%d", modernsize);
+    WritePrivateProfileStringW(L"gen_native", L"modernsize", string, ini_file);
+    wsprintfW(string, L"%d", native);
+    WritePrivateProfileStringW(L"gen_native", L"native", string, ini_file);
+    wsprintfW(string, L"%d", peaksatzero);
+    WritePrivateProfileStringW(L"gen_native", L"peaksatzero", string, ini_file);
+    wsprintfW(string, L"%d", drawvisgrid);
+    WritePrivateProfileStringW(L"gen_native", L"drawvisgrid", string, ini_file);
 }
 
 // Plugin getter function

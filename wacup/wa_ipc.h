@@ -373,6 +373,18 @@ typedef struct {
 ** int inf=SendMessage(hwnd_winamp,WM_WA_IPC,mode,IPC_GETINFO);
 ** IPC_GETINFO returns info about the current playing song. The value
 ** it returns depends on the value of 'mode'.
+** 
+** WACUP addition
+** 
+** IPC_GETINFO using wparam=6 will return the "needing to sync" state. it returns zero by default & 1 if triggered by the input plug-in.
+** 
+** the logic is inverted to what the input plug-ins are actually sending but it makes this compatible with how that api works in giving back zero for anything unknown.
+
+** additionally calling IPC_GETINFO with (WPARAM)-1 will give back a function like with the get sa/vu apis to save having to do the sendmessage stuff to get that info.
+** int (__cdecl *export_get_info)(int);
+**      *(void **)&export_get_info=(void *)SendMessage(hwnd_winamp,WM_WA_IPC,(WPARAM)-1,IPC_GETINFO);
+** the parameter for that method then just matches the existing way of using IPC_GETINFO via sendmessage.
+**
 ** Mode      Meaning
 ** ------------------
 ** 0         Samplerate, in kilohertz (i.e. 44)
@@ -381,6 +393,7 @@ typedef struct {
 ** 3 (5+)    Video LOWORD=w HIWORD=h
 ** 4 (5+)    > 65536, string (video description)
 ** 5 (5.25+) Samplerate, in hertz (i.e. 44100)
+** 6 (WACUP) Sync status
 */
 
 

@@ -13,6 +13,10 @@
 #define IDD_TESTPAGE        102
 #define IDC_TESTSTATIC      1300
 #define IDC_THICKCHECK      1301
+#define IDC_MODERN          1302
+#define IDC_NATIVECOLORS    1303
+#define IDC_MODERNPEAKS     1304
+#define IDC_VISGRID         1305
 
 // PLAYER BUTTONS
 
