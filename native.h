@@ -1,3 +1,5 @@
+#define WIN32_LEAN_AND_MEAN
+
 #ifdef _MSC_VER
 #define NOMINMAX
 #endif
@@ -71,7 +73,7 @@ int repeat = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_REPEAT);
 int shuffle = SendMessage(hwnd_winamp,WM_WA_IPC,0,IPC_GET_SHUFFLE);
 // gets sync status
 int sync = SendMessage(hwnd_winamp,WM_WA_IPC,6,IPC_GETINFO);
-int VisMode = 1;
+int VisMode = 0;
 int TimeMode = 0;
 LRESULT trackLengthMS = SendMessage(hwnd_winamp, WM_WA_IPC, 2, IPC_GETOUTPUTTIME);
 int i_trackLengthMS = (int)(trackLengthMS);
@@ -104,13 +106,25 @@ int sourceY = 0; // Y-coordinate of the top-left corner of the portion
 int sourceWidth = 0; // Width of the portion
 int sourceHeight = 0; // Height of the portion
 
-bool sa_thick = true;
 bool modernsize = false;
 int vis_size = 75;
 bool native = false;
 bool peaksatzero = false;
 int peakthreshold = 15;
 bool drawvisgrid = false;
+
+int bar_falloff[5] = {3, 6, 12, 16, 32};
+float peak_falloff[5] = {1.05f, 1.1f, 1.2f, 1.4f, 1.6f};
+
+int config_safalloff = 3;
+int config_sa_peak_falloff = 2;
+
+wchar_t specdraw[] = L"normal";
+wchar_t bandwidth[] = L"thick";
+wchar_t oscstyle[] = L"lines";
+wchar_t vudraw[] = L"normal";
+
+bool peaks = true;
 
 RECT textRect;
 
@@ -130,6 +144,11 @@ HWND hTrackBar2 = NULL;
 HWND hTrackBar3 = NULL;
 
 HWND hTestBox = NULL;
+HWND hTabControl; // Handle to the tab control
+HWND hTab1, hTab2; // Handles to the child windows of each tab
+HWND hSAFalloffBar;
+HWND hPFalloffBar;
+HWND hVisCombo;
 
 // Define the RECT with DPI scaling applied
 //UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);

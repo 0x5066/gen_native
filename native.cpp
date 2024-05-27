@@ -11,6 +11,7 @@ int init() {
     icc.dwSize = sizeof(icc);
     icc.dwICC = ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icc);
+    InitCommonControls();
 
     if (!native){
         GetSkinColors();
@@ -48,7 +49,7 @@ int init() {
 
     // Populate the preferences dialog structure
     prefsRec->hInst = plugin.hDllInstance; // Assuming your plugin instance
-    prefsRec->dlgID = IDD_TESTPAGE; // Resource identifier of your dialog
+    prefsRec->dlgID = IDC_TABCONTROL; // Resource identifier of your dialog
     prefsRec->proc = (void *)TestWndProc; // Cast the function pointer to void*
     prefsRec->name = L"Native Skin(?)"; // Use wide string literal by prefixing with L
     prefsRec->where = 2; // Add to General Preferences
@@ -65,10 +66,10 @@ int init() {
     pwine_get_version = (const char *(*)())GetProcAddress(hntdll, "wine_get_version");
     if (pwine_get_version) {
         printf("Running on Wine... %s\n", pwine_get_version());
-        rectoffsetbyone = 0; // Set rectoffsetbyone to 1 if running on Wine
+        rectoffsetbyone = 0;
     } else {
         puts("Did not detect Wine.");
-        rectoffsetbyone = 1; // Set rectoffsetbyone to 0 if not running on Wine
+        rectoffsetbyone = 1;
     }
 
     // Add the preferences dialog to Winamp
@@ -423,8 +424,8 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         if (PtInRect(&visRect, pt)) {
             // Switch to the next visualization mode
             VisMode++;
-            if (VisMode > 3) // Wrap around if the mode exceeds 3
-                VisMode = 1;
+            if (VisMode > 2) // Wrap around if the mode exceeds 3
+                VisMode = 0;
         }
         if (PtInRect(&textRect, pt)) {
             TimeMode++;
@@ -478,14 +479,123 @@ INT_PTR CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
     return TRUE;
 }
 
-INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+INT_PTR CALLBACK Tab2Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_INITDIALOG:
+            // Initialize the peaks checkbox
+            CheckDlgButton(hwnd, IDC_SHOW_PEAKS_CHECKBOX, peaks ? BST_CHECKED : BST_UNCHECKED);
+            
+            // Initialize the specdraw radio buttons
+            if (wcscmp(specdraw, L"normal") == 0) {
+                CheckRadioButton(hwnd, IDC_NORMAL_RADIO, IDC_LINE_RADIO, IDC_NORMAL_RADIO);
+            } else if (wcscmp(specdraw, L"fire") == 0) {
+                CheckRadioButton(hwnd, IDC_NORMAL_RADIO, IDC_LINE_RADIO, IDC_FIRE_RADIO);
+            } else if (wcscmp(specdraw, L"line") == 0) {
+                CheckRadioButton(hwnd, IDC_NORMAL_RADIO, IDC_LINE_RADIO, IDC_LINE_RADIO);
+            }
 
+            // Initialize the bandwidth radio buttons
+            if (wcscmp(bandwidth, L"thick") == 0) {
+                CheckRadioButton(hwnd, IDC_THICK_RADIO, IDC_THICK_RADIO, IDC_THICK_RADIO);
+            } else if (wcscmp(bandwidth, L"thin") == 0) {
+                CheckRadioButton(hwnd, IDC_THIN_RADIO, IDC_THIN_RADIO, IDC_THIN_RADIO);
+            }
+
+            if (wcscmp(oscstyle, L"lines") == 0) {
+                CheckDlgButton(hwnd, IDC_OSC_LINES_RADIO, BST_CHECKED);
+            } else if (wcscmp(oscstyle, L"solid") == 0) {
+                CheckDlgButton(hwnd, IDC_OSC_SOLID_RADIO, BST_CHECKED);
+            } else if (wcscmp(oscstyle, L"dots") == 0) {
+                CheckDlgButton(hwnd, IDC_OSC_DOTS_RADIO, BST_CHECKED);
+            }
+
+            hSAFalloffBar = GetDlgItem(hwnd, IDC_FALLOFF_SPEED_SLIDER);
+            SendMessage(hSAFalloffBar, TBM_SETRANGE, FALSE, MAKELPARAM(1, 5));
+            SendMessage(hSAFalloffBar, TBM_SETPOS, TRUE, config_safalloff);
+
+            hPFalloffBar = GetDlgItem(hwnd, IDC_PEAK_FALLOFF_SPEED_SLIDER);
+            SendMessage(hPFalloffBar, TBM_SETRANGE, FALSE, MAKELPARAM(1, 5));
+            SendMessage(hPFalloffBar, TBM_SETPOS, TRUE, config_sa_peak_falloff);
+
+            // Initialize the vis mode combobox
+            hVisCombo = GetDlgItem(hwnd, IDC_VISCOMBO);
+            SendMessageW(hVisCombo, CB_ADDSTRING, 0, (LPARAM)L"Spectrum Analyzer");
+            SendMessageW(hVisCombo, CB_ADDSTRING, 0, (LPARAM)L"Oscilloscope");
+            SendMessageW(hVisCombo, CB_ADDSTRING, 0, (LPARAM)L"Disabled");
+
+            // Set the current selection based on VisMode
+            SendMessageW(hVisCombo, CB_SETCURSEL, VisMode, 0);
+            return TRUE;
+
+        case WM_COMMAND:
+            // Handle button clicks, etc.
+            switch (LOWORD(wParam)) {
+                case IDC_SHOW_PEAKS_CHECKBOX:
+                    // Checkbox state changed, update global variable
+                    peaks = IsDlgButtonChecked(hwnd, IDC_SHOW_PEAKS_CHECKBOX) == BST_CHECKED;
+                    return TRUE;
+                case IDC_NORMAL_RADIO:
+                    // User clicked on 'normal' radio button
+                    wcscpy(specdraw, L"normal");
+                    break;
+                case IDC_FIRE_RADIO:
+                    // User clicked on 'fire' radio button
+                    wcscpy(specdraw, L"fire");
+                    break;
+                case IDC_LINE_RADIO:
+                    // User clicked on 'line' radio button
+                    wcscpy(specdraw, L"line");
+                    break;
+                case IDC_THIN_RADIO:
+                    // User clicked on 'thin' radio button
+                    wcscpy(bandwidth, L"thin");
+                    break;
+                case IDC_THICK_RADIO:
+                    // User clicked on 'thick' radio button
+                    wcscpy(bandwidth, L"thick");
+                    break;
+                case IDC_OSC_LINES_RADIO:
+                    wcscpy(oscstyle, L"lines");
+                    break;
+                case IDC_OSC_SOLID_RADIO:
+                    wcscpy(oscstyle, L"solid");
+                    break;
+                case IDC_OSC_DOTS_RADIO:
+                    wcscpy(oscstyle, L"dots");
+                case IDC_VISCOMBO:
+                    if (HIWORD(wParam) == CBN_SELCHANGE) {
+                        // User selected a different visual mode
+                        hVisCombo = (HWND)lParam;
+                        VisMode = SendMessageW(hVisCombo, CB_GETCURSEL, 0, 0);
+                    }
+                break;
+            }
+            break;
+
+        case WM_HSCROLL:
+            if ((HWND)lParam == hSAFalloffBar) {
+                // Slider position changed, update zoom
+                int pos = SendMessage(hSAFalloffBar, TBM_GETPOS, 0, 0);
+                config_safalloff = pos;
+                return TRUE;
+            }
+            if ((HWND)lParam == hPFalloffBar) {
+                // Slider position changed, update zoom
+                int pos = SendMessage(hPFalloffBar, TBM_GETPOS, 0, 0);
+                config_sa_peak_falloff = pos;
+                return TRUE;
+            }
+            break;
+    }
+    return FALSE;
+}
+
+INT_PTR CALLBACK Tab1Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
     case WM_INITDIALOG:
         SetTimer(hwnd, ID_TIMER2, 16, NULL);
         hTestBox = GetDlgItem(hwnd, IDC_TESTSTATIC);
 
-        CheckDlgButton(hwnd, IDC_THICKCHECK, sa_thick ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hwnd, IDC_MODERN, modernsize ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hwnd, IDC_NATIVECOLORS, native ? BST_CHECKED : BST_UNCHECKED);
         CheckDlgButton(hwnd, IDC_MODERNPEAKS, peaksatzero ? BST_CHECKED : BST_UNCHECKED);
@@ -501,114 +611,198 @@ INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) 
         export_sa_setreq(1); // Pass 1 to get both spectrum and oscilloscope data
         return TRUE;
 
-    case WM_TIMER: {
+    case WM_TIMER:
         if (wParam == ID_TIMER2) {
             InvalidateHWND(hTestBox, hwnd);
+            return TRUE;
         }
-        return TRUE;
-    }
+        break;
 
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
             // remember, checkboxes, radiobuttons, etc, always go in here!
-            case IDC_THICKCHECK:
-                // Checkbox state changed, update global variable
-                sa_thick = (IsDlgButtonChecked(hwnd, IDC_THICKCHECK) == BST_CHECKED);
-            return TRUE;
             case IDC_MODERN:
                 modernsize = (IsDlgButtonChecked(hwnd, IDC_MODERN) == BST_CHECKED);
-            return TRUE;
+                return TRUE;
             case IDC_NATIVECOLORS:
                 native = (IsDlgButtonChecked(hwnd, IDC_NATIVECOLORS) == BST_CHECKED);
-                if (!native){
+                if (!native) {
                     GetSkinColors();
                     InitializeOscColors(colors);
                     //DumpColorsToBMP(colors, 1, 24, "output.bmp");
-                } else {
+                }
+                else {
                     BlendAndWriteColors(ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHTTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), ConvertDWORDToColor(GetSysColor(COLOR_WINDOWTEXT)), ConvertDWORDToColor(GetSysColor(COLOR_HIGHLIGHT)), colors);
                     InitializeOscColors(colors);
                     //DumpColorsToBMP(colors, 1, 24, "output.bmp");
                 }
+                return TRUE;
             case IDC_MODERNPEAKS:
                 peaksatzero = (IsDlgButtonChecked(hwnd, IDC_MODERNPEAKS) == BST_CHECKED);
+                return TRUE;
             case IDC_VISGRID:
                 drawvisgrid = (IsDlgButtonChecked(hwnd, IDC_VISGRID) == BST_CHECKED);
+                return TRUE;
+        }
+        break;
+
+    case WM_PAINT: {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hTestBox, &ps);
+
+        RECT rc;
+        GetClientRect(hTestBox, &rc);
+        int width = rc.right - rc.left;
+        int height = rc.bottom - rc.top;
+
+        // Create a memory device context for double buffering
+        HDC hdcBuffer = CreateCompatibleDC(hdc);
+        HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
+        char* sadata;
+
+        HBRUSH hBrushBg = CreateSolidBrush(RGB(0, 0, 0));
+        FillRect(hdcBuffer, &rc, hBrushBg);
+
+        // Get SA data
+        sadata = export_sa_get();
+
+        // Draw oscilloscope data
+        for (int x = 0; x < 150; x++) {
+            signed char y;
+            if (sadata) {
+                y = sadata[x];
+            }
+            else {
+                y = 0;
+            }
+
+            int intValue = y + 17;
+            if (x < 75) {
+                intValue = intValue - 17;
+            }
+            if (intValue >= 18) {
+                top = 18;
+                bottom = intValue;
+            }
+            else {
+                top = intValue;
+                bottom = 17;
+            }
+            intValue = intValue < 0 ? 0 : (intValue > height - 1 ? height - 1 : intValue);
+
+            for (int dy = top; dy <= bottom; dy++) {
+                SetPixel(hdcBuffer, x, dy, RGB(0, 255, 0));
+            }
+        }
+
+        // Copy the off-screen buffer to the screen
+        BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
+
+        // Clean up
+        SelectObject(hdcBuffer, hOldBitmap);
+        DeleteObject(hBitmap);
+        DeleteDC(hdcBuffer);
+        DeleteObject(hBrushBg);
+
+        EndPaint(hTestBox, &ps);
+        return 0;
+        }
+    }
+        
+    return FALSE;
+}
+
+INT_PTR CALLBACK TestWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    static HWND hTabControl;
+    static HWND hTab1, hTab2;
+
+    switch (msg) {
+        case WM_INITDIALOG:
+        {
+            RECT rcClient;
+            INITCOMMONCONTROLSEX icex;
+            TCITEM tie;
+
+            icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
+            icex.dwICC = ICC_TAB_CLASSES;
+            InitCommonControlsEx(&icex);
+
+            GetClientRect(hwnd, &rcClient);
+            hTabControl = CreateWindow(WC_TABCONTROL, "", WS_CHILD | WS_CLIPSIBLINGS | WS_VISIBLE,
+                                       0, 0, rcClient.right, rcClient.bottom,
+                                       hwnd, NULL, plugin.hDllInstance, NULL);
+            if (hTabControl == NULL)
+            {
+                return FALSE;
+            }
+
+            HFONT hFont = CreateFont(13, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+                                     ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                                     DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, "Tahoma");
+            if (hFont != NULL)
+            {
+                SendMessage(hTabControl, WM_SETFONT, (WPARAM)hFont, TRUE);
+            }
+
+            tie.mask = TCIF_TEXT;
+            tie.pszText = TEXT("Native Skin Options");
+            TabCtrl_InsertItem(hTabControl, 0, &tie);
+
+            tie.pszText = TEXT("Native Visualization");
+            TabCtrl_InsertItem(hTabControl, 1, &tie);
+
+            hTab1 = CreateDialogParam(plugin.hDllInstance, MAKEINTRESOURCE(IDD_TAB1), hTabControl, Tab1Proc, 0);
+            hTab2 = CreateDialogParam(plugin.hDllInstance, MAKEINTRESOURCE(IDD_TAB2), hTabControl, Tab2Proc, 0);
+
+            ShowWindow(hTab1, SW_SHOW);
+            ShowWindow(hTab2, SW_HIDE);
+
+            RECT rcContent;
+            TabCtrl_AdjustRect(hTabControl, FALSE, &rcClient);
+            SetWindowPos(hTab1, NULL, rcClient.left, rcClient.top, rcClient.right - rcClient.left, rcClient.bottom - rcClient.top, SWP_NOZORDER);
+            SetWindowPos(hTab2, NULL, rcClient.left, rcClient.top, rcClient.right - rcClient.left, rcClient.bottom - rcClient.top, SWP_NOZORDER);
+
             return TRUE;
         }
 
-    case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hTestBox, &ps);
+        case WM_SIZE: {
+            if (hTabControl) {
+                RECT rcClient;
+                GetClientRect(hwnd, &rcClient);
 
-            RECT rc;
-            GetClientRect(hTestBox, &rc);
-            int width = rc.right - rc.left;
-            int height = rc.bottom - rc.top;
+                // Resize the tab control to fill the dialog
+                SetWindowPos(hTabControl, NULL, 0, 0, rcClient.right, rcClient.bottom, SWP_NOZORDER);
 
-            // Create a memory device context for double buffering
-            HDC hdcBuffer = CreateCompatibleDC(hdc);
-            HBITMAP hBitmap = CreateCompatibleBitmap(hdc, width, height);
-            HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcBuffer, hBitmap);
-            char* sadata;
+                // Adjust the size and position of the child dialogs within the tab control
+                RECT rcTab;
+                GetClientRect(hTabControl, &rcTab);
+                TabCtrl_AdjustRect(hTabControl, FALSE, &rcTab);
+                SetWindowPos(hTab1, NULL, rcTab.left, rcTab.top, rcTab.right - rcTab.left, rcTab.bottom - rcTab.top, SWP_NOZORDER);
+                SetWindowPos(hTab2, NULL, rcTab.left, rcTab.top, rcTab.right - rcTab.left, rcTab.bottom - rcTab.top, SWP_NOZORDER);
+            }
+            return TRUE;
+        }
 
-            HBRUSH hBrushBg = CreateSolidBrush(RGB(0, 0, 0));
-            FillRect(hdcBuffer, &rc, hBrushBg);
-
-            // Get SA data
-            sadata = export_sa_get();
-
-                // Draw oscilloscope data
-                for (int x = 0; x < 150; x++) {
-                signed char y;
-                    if (sadata) {
-                        y = sadata[x];
-                    }
-                    else {
-                        y = 0;
-                    }
-
-                    int intValue = y + 17;
-                    if (x < 75){
-                        intValue = intValue - 17;
-                    }
-                    if (intValue >= 18) {
-                        top = 18;
-                        bottom = intValue;
-                    } else {
-                        top = intValue;
-                        bottom = 17;
-                    }
-                    intValue = intValue < 0 ? 0 : (intValue > height - 1 ? height - 1 : intValue);
-
-                    
-                    for (int dy = top; dy <= bottom; dy++) {
-                        SetPixel(hdcBuffer, x, dy, RGB(0,255,0));
-                    }
+        case WM_NOTIFY:
+            if (((LPNMHDR)lParam)->code == TCN_SELCHANGE) {
+                int selIndex = TabCtrl_GetCurSel(hTabControl);
+                switch (selIndex) {
+                    case 0:
+                        ShowWindow(hTab1, SW_SHOW);
+                        ShowWindow(hTab2, SW_HIDE);
+                        break;
+                    case 1:
+                        ShowWindow(hTab1, SW_HIDE);
+                        ShowWindow(hTab2, SW_SHOW);
+                        break;
                 }
-
-            // Copy the off-screen buffer to the screen
-            BitBlt(hdc, 0, 0, width, height, hdcBuffer, 0, 0, SRCCOPY);
-
-            // Clean up
-            SelectObject(hdcBuffer, hOldBitmap);
-            DeleteObject(hBitmap);
-            DeleteDC(hdcBuffer);
-            DeleteObject(hBrushBg);
-
-            EndPaint(hTestBox, &ps);
-        return 0;
+                return TRUE;
+            }
+            break;
     }
 
-    case WM_DPICHANGED: {
-        //UINT newDPI = GetDpiFromDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
-        DPIscale = HIWORD(wParam) / 96.0f;
-        //std::string dpiscalestr = std::to_string(HIWORD(wParam) / 96.0f);
-        //MessageBox(hwnd, dpiscalestr.c_str(), "", MB_OK);
-        break;
-    }
-
-    }
-    return FALSE;
+    return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
 LRESULT CALLBACK WinampSubclass(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -895,7 +1089,7 @@ void DrawMainBox(HWND hMainBox, int res) {
         HPEN hPen = CreatePen(PS_SOLID, 0, (COLORREF)(HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
         HPEN hOldPen = SelectPen(hdcBuffer, hPen);
 
-        HBRUSH hOldBrush = SelectBrush(hdcBuffer, (HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
+        HBRUSH hOldBrush = SelectBrush(hdcBuffer, (COLORREF)(HBRUSH)GetSysColorBrush(COLOR_WINDOWTEXT));
 
         POINT vertices[] = { {38 * DPIscale, 26 * DPIscale}, {38 * DPIscale, 10 * DPIscale}, {46 * DPIscale, 18 * DPIscale} };
         Polygon(hdcBuffer, vertices, sizeof(vertices) / sizeof(vertices[0]));
@@ -1006,7 +1200,7 @@ void DrawMainBox(HWND hMainBox, int res) {
         }
     }
 
-        if (VisMode == 2) {
+        if (VisMode == 1) {
 
         // Draw oscilloscope data
         for (int x = 0; x < vis_size; x++) {
@@ -1025,26 +1219,39 @@ void DrawMainBox(HWND hMainBox, int res) {
                 last_y = intValue; // Use intValue directly
             }
 
-            top = intValue; // Use intValue directly
+            top = intValue;
             bottom = last_y;
             last_y = intValue;
 
-            if (bottom < top) {
-                int temp = bottom;
-                bottom = top;
-                top = temp + 1;
+            if (wcscmp(oscstyle, L"lines") == 0 ) {
+                if (bottom < top) {
+                    int temp = bottom;
+                    bottom = top;
+                    top = temp + 1;
+                }
+            } else if (wcscmp(oscstyle, L"solid") == 0 ) {
+                if (intValue >= 8) {
+                    top = 8;
+                    bottom = intValue;
+                } else {
+                    top = intValue;
+                    bottom = 7;
+                }
+            } else if (wcscmp(oscstyle, L"dots") == 0 ) {
+                top = intValue;
+                bottom = intValue;
             }
 
-            for (int dy = top; dy <= bottom; dy++) {
-                int color_index = intValue; // Assuming dy starts from 0
-                COLORREF scope_color = RGB(osccolors[color_index].r, osccolors[color_index].g, osccolors[color_index].b);
-                SetPixel(hdcMem, x, dy, scope_color);
+                for (int dy = top; dy <= bottom; dy++) {
+                    int color_index = intValue; // Assuming dy starts from 0
+                    COLORREF scope_color = RGB(osccolors[color_index].r, osccolors[color_index].g, osccolors[color_index].b);
+                    SetPixel(hdcMem, x, dy, scope_color);
+                    }
                 }
-            }
         }
 
     static int sapeaks[150];
-    static char safalloff[150];
+    static float safalloff[150];
     static char sapeaksdec[150];
     int sadata2[150];
     static float sadata3[150];
@@ -1057,7 +1264,7 @@ void DrawMainBox(HWND hMainBox, int res) {
         // WHY?! WHY DO I HAVE TO DO THIS?! NOWHERE IS THIS IN THE DECOMPILE
         i = ((i = x & 0xfffffffc) < 72) ? i : 71; // Limiting i to prevent out of bounds access
         if (sadata) {
-            if (sa_thick == true) {
+            if (wcscmp(bandwidth, L"thick") == 0) {
                     // Calculate the average of every 4 elements in sadata
                     // this used to be unoptimized and came straight out of ghidra
                     // here's what that looked like
@@ -1073,7 +1280,7 @@ void DrawMainBox(HWND hMainBox, int res) {
                             sadata[i] >> 2;
                     // shove the data from uVar12 into sadata2
                     sadata2[x] = uVar12;
-            } else if (sa_thick == false) { // just copy sadata to sadata2
+            } else { // just copy sadata to sadata2
                 sadata2[x] = sadata[x];
             }
         } else {
@@ -1082,7 +1289,7 @@ void DrawMainBox(HWND hMainBox, int res) {
 
         signed char y = safalloff[x];
 
-        safalloff[x] = safalloff[x] - 2;
+        safalloff[x] = safalloff[x] - (bar_falloff[config_safalloff - 1] / 16.0f);
 
         // okay this is really funny
         // somehow the internal vis data for winamp/wacup can just, wrap around
@@ -1115,7 +1322,7 @@ void DrawMainBox(HWND hMainBox, int res) {
     }
 
         int intValue2 = -(sapeaks[x]/256) + 15;
-
+        
 /*
         ghidra output of winamp 2.63's executable:
         ..
@@ -1141,39 +1348,41 @@ void DrawMainBox(HWND hMainBox, int res) {
 */
 
     sapeaks[x] -= (int)sadata3[x];
-    sadata3[x] *= 1.05f;
+    sadata3[x] *= peak_falloff[config_sa_peak_falloff - 1];
     if (sapeaks[x] < 0) 
     {
         sapeaks[x] = 0;
     }
 
     // Step 2: plot your pixels directly on the bitmap
-    if (VisMode == 1) {
-        if ((x == i + 3 && x < 72) && sa_thick) {
+    if (VisMode == 0) {
+        if ((x == i + 3 && x < 72) && wcscmp(bandwidth, L"thick") == 0) {
             // SORRY NOTHING
             // this is *one* way of skipping rendering
         }
         else {
             for (int dy = -safalloff[x]+16; dy <= 17; ++dy) {
-                int color_index = dy + 2; // Assuming dy starts from 0
+                int color_index;
+                if (wcscmp(specdraw, L"normal") == 0) {
+                    color_index = dy + 2;
+                } else if (wcscmp(specdraw, L"fire") == 0) {
+                    color_index = dy - (-safalloff[x]+16) + 3;
+                } else if (wcscmp(specdraw, L"line") == 0) {
+                    color_index = -safalloff[x]+16 + 2;
+                }
                 COLORREF scope_color = RGB(colors[color_index].r, colors[color_index].g, colors[color_index].b);
                 SetPixel(hdcMem, x, dy, scope_color);
             }
-        }
-
-        if ((x == i + 3 && x < 72) && sa_thick) {
-            // SORRY NOTHING
-        }
-        // Draw peaks using a single color
-        else {
-            if (intValue2 < peakthreshold) {
-                COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
-                SetPixel(hdcMem, x, intValue2, peaksColor);
+            if (peaks){
+                if (intValue2 < peakthreshold) {
+                    COLORREF peaksColor = RGB(colors[23].r, colors[23].g, colors[23].b);
+                    SetPixel(hdcMem, x, intValue2, peaksColor);
+                }
             }
         }
     }
 
-    } if (VisMode == 3) {
+    } if (VisMode == 2) {
         // SORRY NOTHING
     }
 
@@ -1426,16 +1635,33 @@ void config_getinifnW(wchar_t* ini_file) {
     wcscat(ini_file, L"\\Plugins\\gen_native.ini");
 }
 
+void setDefaultIfEmpty(wchar_t* str, const wchar_t* defaultStr) {
+    if (wcslen(str) == 0) {
+        wcscpy(str, defaultStr);
+    }
+}
+
 void config_read() {
     wchar_t ini_file[MAX_PATH];
     config_getinifnW(ini_file);
 
     // Read configuration from the INI file
-    sa_thick = GetPrivateProfileIntW(L"gen_native", L"sa_thick", sa_thick, ini_file);
     modernsize = GetPrivateProfileIntW(L"gen_native", L"modernsize", modernsize, ini_file);
     native = GetPrivateProfileIntW(L"gen_native", L"native", native, ini_file);
     peaksatzero = GetPrivateProfileIntW(L"gen_native", L"peaksatzero", peaksatzero, ini_file);
     drawvisgrid = GetPrivateProfileIntW(L"gen_native", L"drawvisgrid", drawvisgrid, ini_file);
+    peaks = GetPrivateProfileIntW(L"gen_native", L"sa_peaks", peaks, ini_file);
+    GetPrivateProfileStringW(L"gen_native", L"sa_draw", L"", specdraw, sizeof(specdraw), ini_file);
+    GetPrivateProfileStringW(L"gen_native", L"sa_bandwidth", L"", bandwidth, sizeof(bandwidth), ini_file);
+    GetPrivateProfileStringW(L"gen_native", L"oscstyle", L"", oscstyle, sizeof(oscstyle), ini_file);
+    config_safalloff = GetPrivateProfileIntW(L"gen_native", L"config_safalloff", config_safalloff, ini_file);
+    config_sa_peak_falloff = GetPrivateProfileIntW(L"gen_native", L"config_sa_peak_falloff", config_sa_peak_falloff, ini_file);
+    config_sa_peak_falloff = GetPrivateProfileIntW(L"gen_native", L"config_sa_peak_falloff", config_sa_peak_falloff, ini_file);
+    VisMode = GetPrivateProfileIntW(L"gen_native", L"config_sa", VisMode, ini_file);
+
+    setDefaultIfEmpty(specdraw, L"normal");
+    setDefaultIfEmpty(bandwidth, L"thick");
+    setDefaultIfEmpty(oscstyle, L"lines");
 }
 
 void config_write() {
@@ -1444,8 +1670,6 @@ void config_write() {
     config_getinifnW(ini_file);
 
     // Write configuration to the INI file
-    wsprintfW(string, L"%d", sa_thick);
-    WritePrivateProfileStringW(L"gen_native", L"sa_thick", string, ini_file);
     wsprintfW(string, L"%d", modernsize);
     WritePrivateProfileStringW(L"gen_native", L"modernsize", string, ini_file);
     wsprintfW(string, L"%d", native);
@@ -1454,6 +1678,17 @@ void config_write() {
     WritePrivateProfileStringW(L"gen_native", L"peaksatzero", string, ini_file);
     wsprintfW(string, L"%d", drawvisgrid);
     WritePrivateProfileStringW(L"gen_native", L"drawvisgrid", string, ini_file);
+    wsprintfW(string, L"%d", peaks);
+    WritePrivateProfileStringW(L"gen_native", L"sa_peaks", string, ini_file);
+    WritePrivateProfileStringW(L"gen_native", L"sa_draw", specdraw, ini_file);
+    WritePrivateProfileStringW(L"gen_native", L"sa_bandwidth", bandwidth, ini_file);
+    WritePrivateProfileStringW(L"gen_native", L"oscstyle", oscstyle, ini_file);
+    wsprintfW(string, L"%d", config_safalloff);
+    WritePrivateProfileStringW(L"gen_native", L"config_safalloff", string, ini_file);
+    wsprintfW(string, L"%d", config_sa_peak_falloff);
+    WritePrivateProfileStringW(L"gen_native", L"config_sa_peak_falloff", string, ini_file);
+    wsprintfW(string, L"%d", VisMode);
+    WritePrivateProfileStringW(L"gen_native", L"config_sa", string, ini_file);
 }
 
 // Plugin getter function
